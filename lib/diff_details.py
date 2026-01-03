@@ -745,6 +745,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                             <button class="view-diff-btn" 
                                     data-diff-content="{diff_content_base64}"
                                     data-filename="{html_lib.escape(base)}"
+                                    data-cluster1="{html_lib.escape(cluster1)}"
+                                    data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showDiffFromButton(this)">
                                 📄 View Diff
                             </button>
@@ -1346,6 +1348,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             line-height: 1.6;
         }}
         
+        .diff-line[title] {{
+            cursor: help;
+        }}
+        
         .diff-add {{
             background-color: rgba(16, 185, 129, 0.2);
             color: #6ee7b7;
@@ -1612,14 +1618,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         function showDiffFromButton(button) {{
             const base64Content = button.getAttribute('data-diff-content');
             const filename = button.getAttribute('data-filename');
+            const cluster1 = button.getAttribute('data-cluster1');
+            const cluster2 = button.getAttribute('data-cluster2');
             
             // Decodifica base64 contenuto diff
             const diffContent = atob(base64Content);
-            showDiff(diffContent, filename);
+            showDiff(diffContent, filename, cluster1, cluster2);
         }}
         
         // Mostra modal diff con formattazione colorata
-        function showDiff(diffContent, filename) {{
+        function showDiff(diffContent, filename, cluster1, cluster2) {{
             const modal = document.getElementById('diffModal');
             const modalTitle = document.getElementById('modalTitle');
             const modalBody = document.getElementById('modalBody');
@@ -1639,12 +1647,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             for (const line of lines) {{
                 // Determina classe CSS in base a primo carattere
                 let className = 'diff-context';
+                let tooltip = '';
+                
                 if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) {{
                     className = 'diff-header';
                 }} else if (line.startsWith('+')) {{
                     className = 'diff-add';
+                    tooltip = cluster2 || 'Cluster 2';  // Righe verdi = cluster2
                 }} else if (line.startsWith('-')) {{
                     className = 'diff-remove';
+                    tooltip = cluster1 || 'Cluster 1';  // Righe rosse = cluster1
                 }}
                 
                 // Escape HTML per prevenire XSS
@@ -1658,8 +1670,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 // Converti \\n letterali in newline reali per leggibilità
                 const formattedLine = escapedLine.replace(/\\\\n/g, '\\n');
                 
-                // Genera div colorato per riga
-                formattedHtml += `<div class="diff-line ${{className}}">${{formattedLine || '&nbsp;'}}</div>`;
+                // Genera div colorato per riga con tooltip se presente
+                const titleAttr = tooltip ? ` title="${{tooltip}}"` : '';
+                formattedHtml += `<div class="diff-line ${{className}}"${{titleAttr}}>${{formattedLine || '&nbsp;'}}</div>`;
             }}
             
             modalBody.innerHTML = formattedHtml;
