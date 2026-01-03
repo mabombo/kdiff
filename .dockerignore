@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output directory (not needed in image)
+kdiff_output/
+
+# Documentation backup
+*.bak
+README_IT.md
+
+# Docs folder (optional, can include if needed)
+docs/
+
+# Tests (not needed in runtime image)
+tests/
+
+# Installation scripts (not needed in container)
+install.sh
+open-report.sh

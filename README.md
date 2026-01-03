@@ -101,6 +101,32 @@ cd <repository-directory>
 bash tests/run_tests.sh
 ```
 
+#### Method 4: Docker (containerized)
+
+```bash
+# Pull image from Docker Hub
+docker pull YOUR_DOCKERHUB_USERNAME/kdiff:latest
+
+# Run with kubeconfig mount
+docker run --rm -it \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  -c1 prod-cluster -c2 staging-cluster -n myapp
+
+# Or use the wrapper script for easier usage
+./kdiff-docker -c1 prod-cluster -c2 staging-cluster -n myapp
+```
+
+**Docker advantages:**
+- ✅ No Python installation required
+- ✅ No dependencies to manage
+- ✅ Consistent environment across systems
+- ✅ Isolated execution
+- ✅ Perfect for CI/CD pipelines
+
+See [DOCKER_HUB_GUIDE.md](DOCKER_HUB_GUIDE.md) for publishing instructions.
+
 ---
 
 ## 🚀 Quick Start
