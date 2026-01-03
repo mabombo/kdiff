@@ -151,10 +151,10 @@ kdiff_output/
     ├── diffs/                   # ← File .diff per ogni risorsa modificata
     │   ├── configmap__myns__app-config.json.diff
     │   └── deployment__myns__webapp.json.diff
-    ├── REEVO-BMW-PROD/          # ← Risorse normalizzate cluster 1
+    ├── prod-cluster/            # ← Risorse normalizzate cluster 1
     │   ├── configmap__myns__app-config.json
     │   └── deployment__myns__webapp.json
-    └── REEVO-BMW-QA/            # ← Risorse normalizzate cluster 2
+    └── staging-cluster/         # ← Risorse normalizzate cluster 2
         ├── configmap__myns__app-config.json
         └── service__myns__webapp-svc.json
 ```
