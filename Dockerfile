@@ -24,7 +24,7 @@ WORKDIR /app
 
 # Copy kdiff files
 COPY --chown=kdiff:kdiff bin/kdiff /usr/local/bin/kdiff
-COPY --chown=kdiff:kdiff lib/ /app/lib/
+COPY --chown=kdiff:kdiff lib/ /usr/local/lib/
 
 # Make kdiff executable
 RUN chmod +x /usr/local/bin/kdiff
