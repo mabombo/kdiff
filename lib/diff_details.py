@@ -1,0 +1,1882 @@
+#!/usr/bin/env python3
+"""
+diff_details.py - Generatore Report Dettagliati Diff Kubernetes
+
+Questo script genera report dettagliati campo-per-campo delle differenze
+tra risorse Kubernetes di due cluster.
+
+Input:
+  - OUTDIR/summary.json: summary del confronto (da compare.py)
+  - OUTDIR/<cluster1>/: directory con risorse normalizzate cluster 1
+  - OUTDIR/<cluster2>/: directory con risorse normalizzate cluster 2
+  - OUTDIR/diffs/*.diff: file diff già generati
+
+Output:
+  - diff-details.md: report markdown con tabelle differenze
+  - diff-details.json: dati strutturati per automazione
+  - diff-details.html: report HTML interattivo con UI avanzata ⭐
+
+Funzionalità HTML:
+  - Dashboard con statistiche aggregate
+  - Sezioni collassabili per tipo risorsa (Kind)
+  - Risorse individuali expandable
+  - Modal popup per visualizzare diff completi
+  - Controlli zoom (+, -, reset) per diff
+  - Tabella risorse presenti solo in un cluster
+  - Color-coding per tipi di risorsa
+  - Legenda interattiva
+
+Uso:
+  python3 lib/diff_details.py <output_directory> [--cluster1 name1] [--cluster2 name2]
+
+Esempio:
+  python3 lib/diff_details.py ./kdiff_output/20260103T153045Z
+"""
+import argparse
+import json
+from pathlib import Path
+import sys
+import html as html_lib
+import datetime
+import typing
+
+
+# ============================================
+# UTILITY FUNCTIONS - Manipolazione Dati
+# ============================================
+
+def flatten(obj: typing.Any, prefix: str = "") -> dict:
+    """
+    Appiattisce un oggetto JSON nested in un dizionario flat.
+    
+    Converte strutture profondamente annidate in path flat per confronto field-level.
+    
+    Args:
+        obj: Oggetto da appiattire (dict, list, o valore scalare)
+        prefix: Prefisso corrente del path (uso interno ricorsivo)
+    
+    Returns:
+        Dizionario con path come chiavi e valori scalari
+    
+    Esempi:
+        Input:  {"a": {"b": 1, "c": [2, 3]}}
+        Output: {"a.b": 1, "a.c[0]": 2, "a.c[1]": 3}
+        
+        Input:  {"metadata": {"name": "test", "labels": {"app": "web"}}}
+        Output: {"metadata.name": "test", "metadata.labels.app": "web"}
+    
+    Comportamento:
+        - Dict: crea path con dot notation (es. "spec.replicas")
+        - List: crea path con bracket notation (es. "containers[0]")
+        - Scalari: ritorna come coppia path:valore
+    """
+    out = {}
+    
+    if isinstance(obj, dict):
+        # Dizionario: processa ogni chiave ricorsivamente
+        for k, v in obj.items():
+            # Costruisci path: se prefix esiste usa "prefix.key", altrimenti solo "key"
+            p = f"{prefix}.{k}" if prefix else k
+            out.update(flatten(v, p))
+    
+    elif isinstance(obj, list):
+        # Lista: processa ogni elemento con indice
+        for i, v in enumerate(obj):
+            # Path con bracket notation: "path[0]", "path[1]", etc
+            p = f"{prefix}[{i}]"
+            out.update(flatten(v, p))
+    
+    else:
+        # Valore scalare (string, number, bool, None): aggiungi al risultato
+        out[prefix] = obj
+    
+    return out
+
+
+def shortrepr(v):
+    """
+    Genera una rappresentazione breve e leggibile di un valore.
+    
+    Args:
+        v: Valore da rappresentare (qualsiasi tipo)
+    
+    Returns:
+        Stringa formattata con lunghezza max 200 caratteri
+    
+    Comportamento:
+        - None → "❌ (not set)"
+        - Valori lunghi → troncati a 200 char + "..."
+        - Newline → convertiti in \\n per visualizzazione inline
+        - JSON serializable → usa json.dumps per formattazione
+    """
+    if v is None:
+        return "❌ (not set)"
+    
+    try:
+        # Prova serializzazione JSON per formattazione consistente
+        s = json.dumps(v, ensure_ascii=False)
+    except Exception:
+        # Fallback: conversione stringa diretta
+        s = str(v)
+    
+    # Tronca se troppo lungo
+    if len(s) > 200:
+        s = s[:197] + "..."
+    
+    # Sostituisci newline per visualizzazione inline
+    return s.replace("\n", "\\n")
+
+
+def top_key_for_path(p: str) -> str:
+    """
+    Estrae la chiave di primo livello da un path nested.
+    
+    Args:
+        p: Path in formato flat (es. "spec.template.spec.containers[0].image")
+    
+    Returns:
+        Prima componente del path (es. "spec")
+    
+    Esempi:
+        "spec.replicas" → "spec"
+        "metadata.name" → "metadata"
+        "containers[0].image" → "containers"
+        "status.phase" → "status"
+    
+    Uso: Aggregare statistiche per chiave di primo livello
+          (quanti campi spec.* sono cambiati, quanti metadata.*, etc)
+    """
+    import re
+    
+    # Split su '.' o '[' per isolare il primo token
+    # Regex: split su punto O parentesi quadra aperta
+    m = re.split(r"[.\[]", p)
+    
+    # Ritorna primo token, oppure path originale se split fallisce
+    return m[0] if m else p
+
+
+# ============================================
+# COLOR SCHEME - Palette Colori Risorse K8s
+# ============================================
+
+def get_kind_color(kind: str) -> str:
+    """
+    Ritorna un colore HEX univoco per ogni tipo di risorsa Kubernetes.
+    
+    Args:
+        kind: Tipo risorsa K8s (es. "Deployment", "ConfigMap", "Service")
+    
+    Returns:
+        Codice colore HEX (es. "#2563eb")
+    
+    Palette design:
+        - Deployment: blu (workload principale)
+        - ConfigMap: verde (configurazione)
+        - Secret: rosso (credenziali sensibili)
+        - Service: cyan (networking)
+        - StatefulSet: viola (stateful apps)
+        - DaemonSet: arancione (system agents)
+        - etc.
+    
+    Uso:
+        - Badge colorati nei report HTML
+        - Sezioni visivamente distinte per tipo risorsa
+        - Legenda colori interattiva
+    
+    Nota: totale 16 colori distinti + 1 default gray per tipi sconosciuti
+    """
+    colors = {
+        'Deployment': '#2563eb',      # blu - workload principale
+        'StatefulSet': '#7c3aed',     # viola - app stateful
+        'DaemonSet': '#ea580c',       # arancione - agent system-wide
+        'Service': '#0891b2',         # cyan - networking
+        'ConfigMap': '#059669',       # verde - configurazione
+        'Secret': '#dc2626',          # rosso - credenziali
+        'Ingress': '#db2777',         # rosa - routing HTTP
+        'PersistentVolumeClaim': '#ca8a04',  # giallo-scuro - storage
+        'ServiceAccount': '#475569',  # slate - identity
+        'Role': '#4f46e5',            # indigo - RBAC role
+        'RoleBinding': '#7c2d12',     # arancione-scuro - RBAC binding
+        'HorizontalPodAutoscaler': '#0e7490',  # cyan-scuro - autoscaling
+        'CronJob': '#15803d',         # verde-scuro - scheduled jobs
+        'Job': '#166534',             # verde-più-scuro - one-off jobs
+        'ReplicaSet': '#6366f1',      # indigo-chiaro - replica management
+        'Pod': '#9333ea',             # viola-chiaro - pod standalone
+    }
+    
+    # Default: grigio per tipi non mappati
+    return colors.get(kind, '#374151')
+
+
+# ============================================
+# MISSING RESOURCES TABLE - Risorse Esclusive
+# ============================================
+
+def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir):
+    """
+    Genera tabella HTML per risorse presenti solo in un cluster.
+    
+    Args:
+        summary: Dizionario summary.json con liste missing_in_1 e missing_in_2
+        cluster1: Nome primo cluster
+        cluster2: Nome secondo cluster
+        c1_dir: Path directory risorse cluster 1
+        c2_dir: Path directory risorse cluster 2
+    
+    Returns:
+        Stringa HTML con tabella formattata
+    
+    Tabella include:
+        - Tipo risorsa (Kind) con badge colorato
+        - Nome risorsa
+        - Namespace
+        - Badge "Only in <cluster>" con colore distintivo
+    
+    Comportamento:
+        - missing_in_2: risorsa in cluster1 ma NON in cluster2
+        - missing_in_1: risorsa in cluster2 ma NON in cluster1
+        - Se nessuna risorsa mancante: messaggio "No resources found..."
+        - In caso di errore lettura: messaggio "Unable to read..."
+    
+    Design:
+        - Tabella responsive con 4 colonne
+        - Badge colorati per Kind
+        - Badge distintivi per missing_in_c1 vs missing_in_c2
+        - Cliccabile per navigare alla risorsa specifica
+    """
+    # Estrai liste dal summary
+    missing_in_c2 = summary.get('missing_in_2', [])
+    missing_in_c1 = summary.get('missing_in_1', [])
+    
+    # Caso 1: nessuna risorsa mancante
+    if not missing_in_c2 and not missing_in_c1:
+        return '<p style="color: #6b7280; font-style: italic;">No resources found exclusively in one cluster.</p>'
+    
+    rows = []
+    
+    # ========================================
+    # Risorse presenti SOLO in cluster1
+    # ========================================
+    for resource_file in missing_in_c2:
+        try:
+            resource_path = c1_dir / resource_file
+            if resource_path.exists():
+                # Carica risorsa per estrarre metadati
+                obj = json.load(open(resource_path))
+                kind = obj.get('kind', 'Unknown')
+                name = obj.get('metadata', {}).get('name', 'unknown')
+                namespace = obj.get('metadata', {}).get('namespace', '-')
+                color = get_kind_color(kind)
+                
+                # Genera riga tabella HTML
+                rows.append(f'''
+                    <tr>
+                        <td><span class="kind-badge" style="background: {color};">{kind}</span></td>
+                        <td><strong>{name}</strong></td>
+                        <td>{namespace}</td>
+                        <td><span class="missing-badge missing-in-c2">Only in {cluster1}</span></td>
+                    </tr>
+                ''')
+        except:
+            # Ignora errori (file corrotto, JSON invalido, etc)
+            pass
+    
+    # ========================================
+    # Risorse presenti SOLO in cluster2
+    # ========================================
+    for resource_file in missing_in_c1:
+        try:
+            resource_path = c2_dir / resource_file
+            if resource_path.exists():
+                obj = json.load(open(resource_path))
+                kind = obj.get('kind', 'Unknown')
+                name = obj.get('metadata', {}).get('name', 'unknown')
+                namespace = obj.get('metadata', {}).get('namespace', '-')
+                color = get_kind_color(kind)
+                
+                rows.append(f'''
+                    <tr>
+                        <td><span class="kind-badge" style="background: {color};">{kind}</span></td>
+                        <td><strong>{name}</strong></td>
+                        <td>{namespace}</td>
+                        <td><span class="missing-badge missing-in-c1">Only in {cluster2}</span></td>
+                    </tr>
+                ''')
+        except:
+            pass
+    
+    # Caso 2: errori lettura file (nessuna riga generata)
+    if not rows:
+        return '<p style="color: #6b7280; font-style: italic;">Unable to read resource details.</p>'
+    
+    # Caso 3: genera tabella HTML completa
+    return f'''
+        <table class="missing-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Namespace</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {''.join(rows)}
+            </tbody>
+        </table>
+    '''
+
+
+# ============================================
+# MAIN - Elaborazione Principale
+# ============================================
+
+def main():
+    """
+    Funzione principale: elabora summary.json e genera report dettagliato.
+    
+    Processo:
+        1. Carica summary.json con lista risorse differenti
+        2. Per ogni risorsa differente:
+           - Appiattisce JSON di entrambi i cluster (flatten)
+           - Confronta campo per campo
+           - Aggrega differenze per top-level key
+        3. Genera statistiche (top fields modificati)
+        4. Produce output:
+           - diff-details.md (Markdown)
+           - diff-details.json (JSON)
+           - diff-details.html (HTML interattivo)
+    
+    Args (da CLI):
+        outdir: Directory output con summary.json e sottodirectory cluster
+        --cluster1: Nome primo cluster (default: "cluster1")
+        --cluster2: Nome secondo cluster (default: "cluster2")
+    
+    Exit codes:
+        0: Successo
+        2: summary.json non trovato
+    
+    Output files:
+        - diff-details.md: Report Markdown testuale
+        - diff-details.json: Dati strutturati per integrazione
+        - diff-details.html: Report HTML interattivo con zoom/modal
+    """
+    
+    # ========================================
+    # 1. PARSING ARGOMENTI CLI
+    # ========================================
+    p = argparse.ArgumentParser()
+    p.add_argument("outdir", help="Output directory where summary.json and cluster directories exist")
+    p.add_argument('--cluster1', default='cluster1')
+    p.add_argument('--cluster2', default='cluster2')
+    args = p.parse_args()
+    
+    # ========================================
+    # 2. VALIDAZIONE FILE INPUT
+    # ========================================
+    outdir = Path(args.outdir)
+    summary_file = outdir / "summary.json"
+    
+    if not summary_file.exists():
+        print(f"Summary not found: {summary_file}", file=sys.stderr)
+        sys.exit(2)
+
+    # Carica summary.json (contiene liste different/missing_in_1/missing_in_2)
+    with open(summary_file) as fh:
+        summary = json.load(fh)
+
+    # Directory contenenti risorse normalizzate dei due cluster
+    c1_dir = outdir / args.cluster1
+    c2_dir = outdir / args.cluster2
+
+    # ========================================
+    # 3. INIZIALIZZAZIONE OUTPUT MARKDOWN
+    # ========================================
+    md_lines = []
+    md_lines.append("# kdiff — Detailed field-level differences")
+    md_lines.append(f"**Clusters:** {args.cluster1} vs {args.cluster2}")
+    md_lines.append(f"Generated on: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}")
+    md_lines.append("\n**Legend:**")
+    md_lines.append("- 🔄 Value changed")
+    md_lines.append("- ➕ Added in {args.cluster2} (not in {args.cluster1})")
+    md_lines.append("- ➖ Removed in {args.cluster2} (exists in {args.cluster1})")
+    md_lines.append("- ❌ (not set) = field not present or null")
+    md_lines.append("\n---\n")
+
+    # ========================================
+    # 4. INIZIALIZZAZIONE CONTATORI E STRUTTURE DATI
+    # ========================================
+    details = []          # Lista dettagli per ogni risorsa differente
+    counts_top = {}       # Dizionario: top-level key → conteggio modifiche
+    total_resources = 0   # Contatore risorse elaborate
+    total_paths = 0       # Contatore totale campi modificati
+
+    # ========================================
+    # 5. ELABORAZIONE RISORSE DIFFERENTI
+    # ========================================
+    # Cicla su ogni risorsa marcata come "different" nel summary.json
+    for entry in summary.get("different", []):
+        total_resources += 1
+        base = Path(entry).name  # Nome file (es. "deployment__default__myapp.json")
+        f1 = c1_dir / base
+        f2 = c2_dir / base
+
+        # ----------------------------------------
+        # 5.1 Validazione File
+        # ----------------------------------------
+        # Se file mancante in un cluster: segnala e continua
+        if not f1.exists() or not f2.exists():
+            md_lines.append(f"### {base}\n")
+            md_lines.append("**Skipping**: file missing in one cluster.\n")
+            details.append({"file": base, "changed": []})
+            continue
+
+        # ----------------------------------------
+        # 5.2 Caricamento Risorse JSON
+        # ----------------------------------------
+        a = json.load(open(f1))  # Risorsa cluster1
+        b = json.load(open(f2))  # Risorsa cluster2
+        
+        # Estrai metadati per identificazione
+        kind = a.get('kind', 'Unknown')
+        name = a.get('metadata', {}).get('name', 'unknown')
+        color = get_kind_color(kind)
+        
+        # Aggiungi header risorsa al Markdown
+        md_lines.append(f'### <span style="color: {color}; font-weight: bold;">Kind: {kind} | Name: {name}</span> <span style="color: #6b7280; font-size: 0.9em;">({base})</span>\n')
+        
+        # ----------------------------------------
+        # 5.3 Appiattimento JSON (flatten)
+        # ----------------------------------------
+        # Converte JSON annidato in percorsi piatti (es. "spec.replicas": 3)
+        fa = flatten(a)
+        fb = flatten(b)
+        
+        # Unisci tutte le chiavi presenti in entrambi
+        keys = sorted(set(fa.keys()) | set(fb.keys()))
+        
+        # ----------------------------------------
+        # 5.4 Confronto Campo per Campo
+        # ----------------------------------------
+        changed = []  # Lista tuple: (percorso, valore_a, valore_b)
+        
+        for k in keys:
+            va = fa.get(k, None)
+            vb = fb.get(k, None)
+            
+            # Se valori differenti: registra modifica
+            if va != vb:
+                changed.append((k, va, vb))
+                
+                # Aggrega per top-level key (es. "spec", "metadata", etc)
+                tk = top_key_for_path(k)
+                counts_top[tk] = counts_top.get(tk, 0) + 1
+        
+        # ----------------------------------------
+        # 5.5 Generazione Output Markdown
+        # ----------------------------------------
+        md_lines.append(f"**Changed paths:** {len(changed)}\n")
+        
+        if not changed:
+            md_lines.append("No scalar differences detected.\n")
+        else:
+            # Tabella Markdown con 3 colonne
+            md_lines.append(f"| Path | {args.cluster1} | {args.cluster2} |")
+            md_lines.append("|---|---|---|")
+            
+            for pth, va, vb in changed:
+                # Indicatori visivi per tipo modifica:
+                # ➕ = Campo aggiunto in cluster2
+                # ➖ = Campo rimosso in cluster2
+                # 🔄 = Valore modificato
+                if va is None and vb is not None:
+                    indicator = "➕"
+                elif va is not None and vb is None:
+                    indicator = "➖"
+                else:
+                    indicator = "🔄"
+                
+                # Formatta riga tabella con valori abbreviati
+                md_lines.append(f"| {indicator} `{pth}` | `{shortrepr(va)}` | `{shortrepr(vb)}` |")
+        
+        md_lines.append("\n")
+        total_paths += len(changed)
+        
+        # Salva dettagli strutturati per JSON output
+        details.append({
+            "file": base,
+            "changed": [{"path": p, "a": fa.get(p), "b": fb.get(p)} for (p, a, b) in changed]
+        })
+
+    # ========================================
+    # 6. GENERAZIONE SUMMARY MARKDOWN
+    # ========================================
+    md_lines.append("\n---\n")
+    md_lines.append("## Summary\n")
+    md_lines.append(f"- **Total resources with differences:** {total_resources}")
+    md_lines.append(f"- **Total changed scalar paths:** {total_paths}")
+    md_lines.append(f"- **Average changes per resource:** {total_paths / total_resources if total_resources > 0 else 0:.1f}")
+    
+    # Tabella aggregata: top-level keys più modificati
+    md_lines.append("\n## Aggregated top changed keys\n")
+    md_lines.append("| Key | Approx. change count |")
+    md_lines.append("|---:|---:|")
+    for k, cnt in sorted(counts_top.items(), key=lambda x: x[1], reverse=True):
+        md_lines.append(f"| {k} | {cnt} |")
+
+    # ========================================
+    # 7. SCRITTURA FILE OUTPUT
+    # ========================================
+    
+    # 7.1 Salva Markdown Report
+    md_text = "\n".join(md_lines)
+    (outdir / "diff-details.md").write_text(md_text, encoding="utf-8")
+
+    # 7.2 Salva JSON Report (strutturato per integrazione)
+    json_output = {
+        "generated": datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        "details": details,
+        "counts_top": counts_top,
+        "total_resources": total_resources,
+        "total_paths": total_paths
+    }
+    (outdir / "diff-details.json").write_text(
+        json.dumps(json_output, indent=2, ensure_ascii=False),
+        encoding="utf-8"
+    )
+
+    # 7.3 Genera HTML Report Interattivo (con CSS/JS)
+    generate_html_report(
+        outdir, summary, details, counts_top,
+        total_resources, total_paths,
+        args.cluster1, args.cluster2,
+        c1_dir, c2_dir
+    )
+
+    print(f"Wrote detailed diff report: {outdir / 'diff-details.md'} and {outdir / 'diff-details.html'}")
+
+
+
+
+# ============================================
+# HTML REPORT GENERATOR - Report Interattivo
+# ============================================
+
+def generate_html_report(outdir, summary, details, counts_top, total_resources, total_paths, cluster1, cluster2, c1_dir, c2_dir):
+    """
+    Genera report HTML interattivo con CSS/JavaScript avanzato.
+    
+    Args:
+        outdir: Directory output
+        summary: Dizionario summary.json
+        details: Lista dettagli risorse differenti
+        counts_top: Dizionario conteggi per top-level key
+        total_resources: Numero totale risorse con differenze
+        total_paths: Numero totale campi modificati
+        cluster1: Nome primo cluster
+        cluster2: Nome secondo cluster
+        c1_dir: Path directory cluster1
+        c2_dir: Path directory cluster2
+    
+    Output:
+        - diff-details.html: Report HTML interattivo con:
+          * Dashboard con statistiche colorate
+          * Sezioni collassabili per Kind
+          * Tabelle dettagliate per ogni risorsa
+          * Modal popup per view diff con zoom
+          * CSS gradient design (#667eea → #764ba2)
+          * Badge colorati per tipo risorsa
+          * Indicatori visivi (➕ ➖ 🔄)
+          * Filtro per tipo modifica
+          * Esportazione dati
+    
+    Features interattive:
+        - Collapse/expand sezioni
+        - View Diff modal con zoom +/-
+        - Badge colorati per Kind
+        - Legenda interattiva
+        - Statistiche aggregate
+        - Risorse solo in un cluster (missing table)
+    """
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    
+    # ========================================
+    # 1. RAGGRUPPAMENTO RISORSE PER KIND
+    # ========================================
+    # Organizza risorse per tipo (Deployment, ConfigMap, etc)
+    resources_by_kind = {}
+    
+    for detail in details:
+        base = detail['file']
+        changed = detail['changed']
+        
+        # Salta risorse senza differenze
+        if not changed:
+            continue
+        
+        # Estrai Kind e Name dal file JSON
+        try:
+            f1 = c1_dir / base
+            if f1.exists():
+                obj = json.load(open(f1))
+                kind = obj.get('kind', 'Unknown')
+                name = obj.get('metadata', {}).get('name', 'unknown')
+            else:
+                kind = 'Unknown'
+                name = 'unknown'
+        except:
+            kind = 'Unknown'
+            name = 'unknown'
+        
+        # Inizializza lista per nuovo Kind
+        if kind not in resources_by_kind:
+            resources_by_kind[kind] = []
+        
+        # Aggiungi risorsa al gruppo
+        resources_by_kind[kind].append({
+            'base': base,
+            'name': name,
+            'kind': kind,
+            'changed': changed
+        })
+    
+    # ========================================
+    # 2. GENERAZIONE HTML PER OGNI KIND GROUP
+    # ========================================
+    kind_groups_html = []
+    
+    for kind in sorted(resources_by_kind.keys()):
+        resources = resources_by_kind[kind]
+        color = get_kind_color(kind)
+        total_changes = sum(len(r['changed']) for r in resources)
+        
+        # ----------------------------------------
+        # 2.1 Genera HTML per ogni risorsa del Kind
+        # ----------------------------------------
+        resources_html = []
+        
+        for resource in resources:
+            base = resource['base']
+            name = resource['name']
+            changed = resource['changed']
+            
+            # ----------------------------------------
+            # 2.2 Genera righe tabella per ogni campo modificato
+            # ----------------------------------------
+            rows_html = []
+            
+            for item in changed:
+                path = item['path']
+                va = item.get('a')
+                vb = item.get('b')
+                
+                # Determina tipo modifica e badge:
+                # ➕ = Aggiunto in cluster2
+                # ➖ = Rimosso in cluster2
+                # 🔄 = Valore modificato
+                if va is None and vb is not None:
+                    icon = f'<span class="badge badge-add" title="Present in {cluster2}, not in {cluster1}">➕ Added</span>'
+                    row_class = 'row-add'
+                elif va is not None and vb is None:
+                    icon = f'<span class="badge badge-remove" title="Present in {cluster1}, not in {cluster2}">➖ Removed</span>'
+                    row_class = 'row-remove'
+                else:
+                    icon = '<span class="badge badge-change" title="Value modified between clusters">🔄 Changed</span>'
+                    row_class = 'row-change'
+                
+                # Formatta valori con gestione newline e HTML escape
+                if va is not None:
+                    val_str = shortrepr(va)
+                    # Converti \n in newline reali per pre-wrap CSS
+                    val_a_html = html_lib.escape(val_str).replace('\\n', '\n')
+                else:
+                    # Valore null: mostra ❌ con tooltip
+                    val_a_html = '<span class="null-value" title="Not set">❌</span>'
+                
+                if vb is not None:
+                    val_str = shortrepr(vb)
+                    val_b_html = html_lib.escape(val_str).replace('\\n', '\n')
+                else:
+                    val_b_html = '<span class="null-value" title="Not set">❌</span>'
+                
+                # Genera riga tabella HTML
+                rows_html.append(f'''
+                    <tr class="{row_class}">
+                        <td class="col-icon">{icon}</td>
+                        <td class="col-path"><code>{html_lib.escape(path)}</code></td>
+                        <td class="col-value"><code>{val_a_html}</code></td>
+                        <td class="col-value"><code>{val_b_html}</code></td>
+                    </tr>
+                ''')
+            
+            # ----------------------------------------
+            # 2.3 Carica contenuto diff file per modal
+            # ----------------------------------------
+            diff_file = outdir / 'diffs' / f"{base}.diff"
+            diff_content = ""
+            
+            if diff_file.exists():
+                try:
+                    diff_content = diff_file.read_text(encoding='utf-8')
+                except:
+                    diff_content = "Error reading diff file"
+            else:
+                diff_content = "Diff file not found"
+            
+            # Encode base64 per evitare problemi HTML escaping
+            import base64
+            diff_content_base64 = base64.b64encode(diff_content.encode('utf-8')).decode('ascii')
+            
+            # ----------------------------------------
+            # 2.4 Genera HTML sezione risorsa (collapsabile)
+            # ----------------------------------------
+            resources_html.append(f'''
+                <div class="resource-section" id="resource-{base.replace('.', '-')}">
+                    <div class="resource-header" style="border-left: 4px solid {color};">
+                        <div style="flex: 1; cursor: pointer;" onclick="toggleResource('{base.replace('.', '-')}')">
+                            <div class="resource-title">
+                                <span class="toggle-icon-small collapsed" id="toggle-res-{base.replace('.', '-')}">▶</span>
+                                <span class="resource-name">{name}</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <span class="stat-badge">{len(changed)} changes</span>
+                            <button class="view-diff-btn" 
+                                    data-diff-content="{diff_content_base64}"
+                                    data-filename="{html_lib.escape(base)}"
+                                    onclick="event.stopPropagation(); showDiffFromButton(this)">
+                                📄 View Diff
+                            </button>
+                        </div>
+                    </div>
+                    <div class="resource-body collapsed" id="res-body-{base.replace('.', '-')}">
+                        <table class="diff-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Type</th>
+                                    <th style="width: 30%;">Path</th>
+                                    <th style="width: 35%;">{cluster1}</th>
+                                    <th style="width: 35%;">{cluster2}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {''.join(rows_html)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ''')
+        
+        # ----------------------------------------
+        # 2.5 Genera gruppo Kind collapsabile
+        # ----------------------------------------
+        # Ogni Kind (Deployment, ConfigMap, etc) ha sezione collassabile
+        kind_id = kind.lower().replace(' ', '-')
+        kind_groups_html.append(f'''
+            <div class="kind-group" data-kind="{kind_id}">
+                <div class="kind-header" onclick="toggleKind('{kind_id}')" style="border-left: 4px solid {color};">
+                    <div class="kind-title">
+                        <span class="toggle-icon collapsed" id="toggle-{kind_id}">▶</span>
+                        <span class="kind-badge" style="background: {color};">{kind}</span>
+                        <span class="kind-count">{len(resources)} resource{'s' if len(resources) > 1 else ''}</span>
+                    </div>
+                    <div class="kind-stats">
+                        <span class="stat-badge">{total_changes} total changes</span>
+                    </div>
+                </div>
+                <div class="kind-body collapsed" id="kind-body-{kind_id}">
+                    {''.join(resources_html)}
+                </div>
+            </div>
+        ''')
+    
+    # ========================================
+    # 3. GENERAZIONE TABELLA TOP CHANGED KEYS
+    # ========================================
+    # Barra progressiva per visualizzare top-level keys più modificati
+    top_keys_rows = []
+    
+    for k, cnt in sorted(counts_top.items(), key=lambda x: x[1], reverse=True)[:15]:
+        # Calcola larghezza barra proporzionale al max
+        bar_width = int((cnt / max(counts_top.values())) * 100) if counts_top else 0
+        
+        top_keys_rows.append(f'''
+            <tr>
+                <td><strong>{html_lib.escape(k)}</strong></td>
+                <td>
+                    <div class="bar-container">
+                        <div class="bar" style="width: {bar_width}%;"></div>
+                        <span class="bar-label">{cnt}</span>
+                    </div>
+                </td>
+            </tr>
+        ''')
+    
+    # Calcola media modifiche per risorsa
+    avg_changes = total_paths / total_resources if total_resources > 0 else 0
+    
+    # ========================================
+    # 4. ASSEMBLAGGIO HTML COMPLETO
+    # ========================================
+    # Template HTML con CSS embedded e JavaScript per interattività
+    
+    html_content = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kdiff - Detailed Comparison Report</title>
+    <style>
+        /* =====================================
+           CSS RESET E STILI BASE
+           ===================================== */
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            /* Gradient viola-blu di sfondo */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1f2937;
+            line-height: 1.6;
+            padding: 20px;
+        }}
+        
+        /* Container principale bianco con ombra */
+        .container {{
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }}
+        
+        /* =====================================
+           HEADER - Intestazione con Gradient
+           ===================================== */
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }}
+        
+        .header .subtitle {{
+            font-size: 1.2em;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }}
+        
+        .header .metadata {{
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }}
+        
+        .header .metadata-item {{
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }}
+        
+        /* =====================================
+           STATS GRID - Dashboard Statistiche
+           ===================================== */
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f9fafb;
+        }}
+        
+        /* Card statistiche con hover effect */
+        .stat-card {{
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }}
+        
+        .stat-card:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }}
+        
+        /* Colori bordo sinistro per tipo card */
+        .stat-card.resources {{ border-left-color: #3b82f6; }}  /* Blu */
+        .stat-card.changes {{ border-left-color: #f59e0b; }}    /* Arancione */
+        .stat-card.missing {{ border-left-color: #dc2626; cursor: pointer; }}  /* Rosso */
+        .stat-card.missing:hover {{ background: #fef2f2; }}
+        
+        .stat-card .stat-label {{
+            font-size: 0.9em;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }}
+        
+        /* Valore numerico con gradient text */
+        .stat-card .stat-value {{
+            font-size: 2.5em;
+            font-weight: 700;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }}
+        
+        /* =====================================
+           CONTENT - Contenuto Principale
+           ===================================== */
+        .content {{
+            padding: 40px;
+        }}
+        
+        .section {{
+            margin-bottom: 40px;
+        }}
+        
+        .section-title {{
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            color: #111827;
+        }}
+        
+        /* =====================================
+           LEGEND - Legenda Interattiva
+           ===================================== */
+        .legend {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+        
+        .legend-item {{
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+        }}
+        
+        .legend-item:nth-child(1) {{
+            border-left-color: #3b82f6;
+        }}
+        
+        .legend-item:nth-child(2) {{
+            border-left-color: #10b981;
+        }}
+        
+        .legend-item:nth-child(3) {{
+            border-left-color: #ef4444;
+        }}
+        
+        .legend-item:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }}
+        
+        .legend-item .badge {{
+            font-size: 1.8em;
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }}
+        
+        .legend-item .legend-text {{
+            flex: 1;
+        }}
+        
+        .legend-item .legend-title {{
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #111827;
+            margin-bottom: 4px;
+        }}
+        
+        .legend-item .legend-description {{
+            font-size: 0.9em;
+            color: #6b7280;
+            line-height: 1.4;
+        }}
+        
+        .badge {{
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: help;
+        }}
+        
+        .null-value {{
+            color: #9ca3af;
+            font-size: 1.2em;
+            cursor: help;
+            display: inline-block;
+            transition: transform 0.2s;
+        }}
+        
+        .null-value:hover {{
+            transform: scale(1.3);
+        }}
+        
+        .badge-add {{
+            background: #d1fae5;
+            color: #065f46;
+        }}
+        
+        .badge-remove {{
+            background: #fee2e2;
+            color: #991b1b;
+        }}
+        
+        .badge-change {{
+            background: #dbeafe;
+            color: #1e40af;
+        }}
+        
+        .kind-group {{
+            margin-bottom: 30px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }}
+        
+        .kind-header {{
+            padding: 20px 25px;
+            background: linear-gradient(to right, #f9fafb 0%, white 100%);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        
+        .kind-header:hover {{
+            background: linear-gradient(to right, #f3f4f6 0%, #f9fafb 100%);
+        }}
+        
+        .kind-title {{
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }}
+        
+        .toggle-icon {{
+            font-size: 0.8em;
+            transition: transform 0.3s;
+            color: #6b7280;
+        }}
+        
+        .toggle-icon.collapsed {{
+            transform: rotate(-90deg);
+        }}
+        
+        .kind-count {{
+            color: #6b7280;
+            font-size: 0.8em;
+            font-weight: 500;
+        }}
+        
+        .kind-stats {{
+            display: flex;
+            gap: 10px;
+        }}
+        
+        .kind-body {{
+            padding: 20px;
+            background: #fafbfc;
+            max-height: 10000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out, padding 0.3s ease;
+        }}
+        
+        .kind-body.collapsed {{
+            max-height: 0;
+            padding: 0 20px;
+        }}
+        
+        .resource-section {{
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }}
+        
+        .resource-header {{
+            padding: 20px;
+            background: linear-gradient(to right, #f9fafb 0%, white 100%);
+            border-bottom: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            user-select: none;
+            transition: background 0.2s;
+        }}
+        
+        .resource-header:hover {{
+            background: linear-gradient(to right, #f3f4f6 0%, #f9fafb 100%);
+        }}
+        
+        .resource-title {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }}
+        
+        .toggle-icon-small {{
+            font-size: 0.7em;
+            transition: transform 0.3s;
+            color: #6b7280;
+        }}
+        
+        .toggle-icon-small.collapsed {{
+            transform: rotate(-90deg);
+        }}
+        
+        .kind-badge {{
+            padding: 6px 14px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        
+        .resource-name {{
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #111827;
+        }}
+        
+        .resource-file {{
+            font-size: 0.9em;
+            color: #6b7280;
+            font-family: 'Monaco', 'Courier New', monospace;
+            margin-bottom: 8px;
+        }}
+        
+        .resource-stats {{
+            display: flex;
+            gap: 10px;
+        }}
+        
+        .stat-badge {{
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }}
+        
+        .view-diff-btn {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        
+        .view-diff-btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }}
+        
+        .view-diff-btn:active {{
+            transform: translateY(0);
+        }}
+        
+        .modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }}
+        
+        .modal-content {{
+            background-color: #1e1e1e;
+            margin: 3% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease;
+        }}
+        
+        @keyframes slideDown {{
+            from {{
+                opacity: 0;
+                transform: translateY(-50px);
+            }}
+            to {{
+                opacity: 1;
+                transform: translateY(0);
+            }}
+        }}
+        
+        .modal-header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        
+        .modal-title {{
+            font-size: 1.3em;
+            font-weight: 600;
+            flex: 1;
+        }}
+        
+        .zoom-controls {{
+            display: flex;
+            gap: 10px;
+            margin-right: 20px;
+        }}
+        
+        .zoom-btn {{
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        
+        .zoom-btn:hover {{
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+            transform: scale(1.1);
+        }}
+        
+        .zoom-btn:active {{
+            transform: scale(0.95);
+        }}
+        
+        .close {{
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }}
+        
+        .close:hover {{
+            transform: scale(1.2);
+        }}
+        
+        .modal-body {{
+            padding: 30px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 70vh;
+            overflow-y: auto;
+            border-radius: 0 0 12px 12px;
+        }}
+        
+        .diff-line {{
+            white-space: pre-wrap;
+            padding: 2px 10px;
+            line-height: 1.6;
+        }}
+        
+        .diff-add {{
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }}
+        
+        .diff-remove {{
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }}
+        
+        .diff-context {{
+            color: #9ca3af;
+        }}
+        
+        .diff-header {{
+            color: #60a5fa;
+            font-weight: bold;
+        }}
+        
+        .resource-body {{
+            padding: 0;
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+        }}
+        
+        .resource-body.collapsed {{
+            max-height: 0;
+        }}
+        
+        .missing-resources-section {{
+            display: none;
+            margin-top: 20px;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }}
+        
+        .missing-resources-section.visible {{
+            display: block;
+        }}
+        
+        .missing-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }}
+        
+        .missing-table thead {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }}
+        
+        .missing-table th {{
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+        }}
+        
+        .missing-table td {{
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+        
+        .missing-table tbody tr:hover {{
+            background: #f9fafb;
+        }}
+        
+        .missing-badge {{
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }}
+        
+        .missing-in-c1 {{
+            background: #dbeafe;
+            color: #1e40af;
+        }}
+        
+        .missing-in-c2 {{
+            background: #fee2e2;
+            color: #991b1b;
+        }}
+        
+        .diff-table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        
+        .diff-table thead {{
+            background: #f3f4f6;
+        }}
+        
+        .diff-table th {{
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #d1d5db;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        
+        .diff-table td {{
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }}
+        
+        .diff-table tbody tr:hover {{
+            background: #f9fafb;
+        }}
+        
+        .row-add {{
+            background: rgba(209, 250, 229, 0.3);
+        }}
+        
+        .row-remove {{
+            background: rgba(254, 226, 226, 0.3);
+        }}
+        
+        .row-change {{
+            background: rgba(219, 234, 254, 0.3);
+        }}
+        
+        .col-icon {{
+            width: 100px;
+        }}
+        
+        .col-path code {{
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #6366f1;
+            font-weight: 500;
+        }}
+        
+        .col-value code {{
+            display: block;
+            background: #f9fafb;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #111827;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }}
+        
+        .null-value {{
+            color: #9ca3af;
+            font-style: italic;
+        }}
+        
+        .top-keys-table {{
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }}
+        
+        .top-keys-table td {{
+            padding: 12px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+        
+        .top-keys-table tr:hover {{
+            background: #f9fafb;
+        }}
+        
+        .bar-container {{
+            position: relative;
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }}
+        
+        .bar {{
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+        }}
+        
+        .bar-label {{
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: 600;
+            color: #111827;
+            z-index: 1;
+        }}
+        
+        .footer {{
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }}
+        
+        @media print {{
+            body {{
+                background: white;
+            }}
+            .container {{
+                box-shadow: none;
+            }}
+        }}
+    </style>
+    <script>
+        /* =====================================
+           JAVASCRIPT - Interattività Report
+           =====================================
+           
+           Funzioni principali:
+           - Zoom in/out del diff modal
+           - Apertura/chiusura modal diff
+           - Toggle collapse/expand sezioni
+           - Toggle missing resources section
+           
+           ===================================== */
+        
+        // ========================================
+        // ZOOM CONTROLS - Controlli Zoom Modal
+        // ========================================
+        let currentFontSize = 14;
+        
+        function zoomIn() {{
+            currentFontSize += 2;
+            document.getElementById('modalBody').style.fontSize = currentFontSize + 'px';
+        }}
+        
+        function zoomOut() {{
+            if (currentFontSize > 8) {{
+                currentFontSize -= 2;
+                document.getElementById('modalBody').style.fontSize = currentFontSize + 'px';
+            }}
+        }}
+        
+        function resetZoom() {{
+            currentFontSize = 14;
+            document.getElementById('modalBody').style.fontSize = currentFontSize + 'px';
+        }}
+        
+        // ========================================
+        // DIFF MODAL - Popup View Diff
+        // ========================================
+        
+        // Mostra modal diff da bottone (decodifica base64)
+        function showDiffFromButton(button) {{
+            const base64Content = button.getAttribute('data-diff-content');
+            const filename = button.getAttribute('data-filename');
+            
+            // Decodifica base64 contenuto diff
+            const diffContent = atob(base64Content);
+            showDiff(diffContent, filename);
+        }}
+        
+        // Mostra modal diff con formattazione colorata
+        function showDiff(diffContent, filename) {{
+            const modal = document.getElementById('diffModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = filename;
+            
+            // ========================================
+            // Formatta diff con colori per tipo riga:
+            // - Header (+++/---/@@): grigio
+            // - Aggiunte (+): verde
+            // - Rimozioni (-): rosso
+            // - Contesto: nero
+            // ========================================
+            const lines = diffContent.split('\\n');
+            let formattedHtml = '';
+            
+            for (const line of lines) {{
+                // Determina classe CSS in base a primo carattere
+                let className = 'diff-context';
+                if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) {{
+                    className = 'diff-header';
+                }} else if (line.startsWith('+')) {{
+                    className = 'diff-add';
+                }} else if (line.startsWith('-')) {{
+                    className = 'diff-remove';
+                }}
+                
+                // Escape HTML per prevenire XSS
+                const escapedLine = line
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+                
+                // Converti \\n letterali in newline reali per leggibilità
+                const formattedLine = escapedLine.replace(/\\\\n/g, '\\n');
+                
+                // Genera div colorato per riga
+                formattedHtml += `<div class="diff-line ${{className}}">${{formattedLine || '&nbsp;'}}</div>`;
+            }}
+            
+            modalBody.innerHTML = formattedHtml;
+            modal.style.display = 'block';
+        }}
+        
+        // Chiude modal diff
+        function closeDiffModal() {{
+            const modal = document.getElementById('diffModal');
+            modal.style.display = 'none';
+        }}
+        
+        // Chiudi modal cliccando fuori dal contenuto
+        window.onclick = function(event) {{
+            const modal = document.getElementById('diffModal');
+            if (event.target === modal) {{
+                closeDiffModal();
+            }}
+        }}
+        
+        // Chiudi modal con tasto Escape
+        document.addEventListener('keydown', function(event) {{
+            if (event.key === 'Escape') {{
+                closeDiffModal();
+            }}
+        }});
+        
+        // ========================================
+        // COLLAPSE/EXPAND - Toggle Sezioni
+        // ========================================
+        
+        // Toggle gruppo Kind (Deployment, ConfigMap, etc)
+        function toggleKind(kindId) {{
+            const body = document.getElementById('kind-body-' + kindId);
+            const icon = document.getElementById('toggle-' + kindId);
+            
+            if (body.classList.contains('collapsed')) {{
+                // Espandi sezione
+                body.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            }} else {{
+                // Collassa sezione
+                body.classList.add('collapsed');
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }}
+        }}
+        
+        // Toggle singola risorsa dentro un Kind
+        function toggleResource(resourceId) {{
+            const body = document.getElementById('res-body-' + resourceId);
+            const icon = document.getElementById('toggle-res-' + resourceId);
+            
+            if (body.classList.contains('collapsed')) {{
+                body.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            }} else {{
+                body.classList.add('collapsed');
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }}
+        }}
+        
+        // Espandi tutte le sezioni (Kind + Risorse)
+        function expandAll() {{
+            document.querySelectorAll('.kind-body').forEach(body => {{
+                body.classList.remove('collapsed');
+            }});
+            document.querySelectorAll('.toggle-icon').forEach(icon => {{
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            }});
+            document.querySelectorAll('.resource-body').forEach(body => {{
+                body.classList.remove('collapsed');
+            }});
+            document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            }});
+        }}
+        
+        // Collassa tutte le sezioni
+        function collapseAll() {{
+            document.querySelectorAll('.kind-body').forEach(body => {{
+                body.classList.add('collapsed');
+            }});
+            document.querySelectorAll('.toggle-icon').forEach(icon => {{
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }});
+            document.querySelectorAll('.resource-body').forEach(body => {{
+                body.classList.add('collapsed');
+            }});
+            document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }});
+        }}
+        
+        // ========================================
+        // MISSING RESOURCES - Toggle Tabella
+        // ========================================
+        
+        // Mostra/nascondi sezione risorse presenti solo in un cluster
+        function toggleMissingResources() {{
+            const section = document.getElementById('missingResourcesSection');
+            section.classList.toggle('visible');
+        }}
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 kdiff - Detailed Comparison Report</h1>
+            <div class="subtitle">Kubernetes Resource Differences Analysis</div>
+            <div class="metadata">
+                <div class="metadata-item">
+                    <strong>Cluster 1:</strong> {cluster1}
+                </div>
+                <div class="metadata-item">
+                    <strong>Cluster 2:</strong> {cluster2}
+                </div>
+                <div class="metadata-item">
+                    <strong>Generated:</strong> {timestamp}
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card resources">
+                <div class="stat-label">Resources with Differences</div>
+                <div class="stat-value">{total_resources}</div>
+            </div>
+            <div class="stat-card changes">
+                <div class="stat-label">Total Changed Fields</div>
+                <div class="stat-value">{total_paths}</div>
+            </div>
+            <div class="stat-card missing" onclick="toggleMissingResources()" title="Click to view details">
+                <div class="stat-label">Resources Only in One Cluster</div>
+                <div class="stat-value">{summary['counts']['missing_in_1'] + summary['counts']['missing_in_2']}</div>
+            </div>
+        </div>
+        
+        <div id="missingResourcesSection" class="missing-resources-section">
+            <h3 style="margin-bottom: 20px; color: #111827; font-size: 1.5em;">Resources Present in Only One Cluster</h3>
+            {generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir)}
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">Legend</h2>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="badge badge-change">🔄</span>
+                        <div class="legend-text">
+                            <div class="legend-title">Changed</div>
+                            <div class="legend-description">Value modified between clusters</div>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge badge-add">➕</span>
+                        <div class="legend-text">
+                            <div class="legend-title">Added</div>
+                            <div class="legend-description">Present in {cluster2}, not in {cluster1}</div>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge badge-remove">➖</span>
+                        <div class="legend-text">
+                            <div class="legend-title">Removed</div>
+                            <div class="legend-description">Present in {cluster1}, not in {cluster2}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">Resource Details (Grouped by Type)</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="expandAll()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Expand All</button>
+                        <button onclick="collapseAll()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Collapse All</button>
+                    </div>
+                </div>
+                {''.join(kind_groups_html)}
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by <strong>kdiff</strong> - Kubernetes Cluster Comparison Tool</p>
+        </div>
+    </div>
+    
+    <!-- Diff Modal -->
+    <div id="diffModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Diff File</h2>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+                    <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">⟲</button>
+                    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                </div>
+                <span class="close" onclick="closeDiffModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Diff content will be inserted here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>'''
+    
+    (outdir / "diff-details.html").write_text(html_content, encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,1 @@
+{"metadata":{"name":"my-config","labels":{"app":"x"},"annotations":{"foo":"bar","kubectl.kubernetes.io/last-applied-configuration":"..."},"creationTimestamp":"2020-01-01T00:00:00Z","uid":"12345","resourceVersion":"6789"},"data":{"key":"value"},"status":{"some":"thing"}}

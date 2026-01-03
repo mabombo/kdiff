@@ -1,0 +1,14 @@
+{
+  "data": {
+    "key": "value"
+  },
+  "metadata": {
+    "annotations": {
+      "foo": "bar"
+    },
+    "labels": {
+      "app": "x"
+    },
+    "name": "my-config"
+  }
+}
