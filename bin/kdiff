@@ -224,8 +224,12 @@ def main():
     # call compare.py
     rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
 
+    # Report HTML interattivo dettagliato - SEMPRE generato (anche con 0 differenze)
+    subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
+
     if rc == 0:
         print(f"\n{GREEN}✅ I cluster sono uguali per le risorse verificate.{RESET}")
+        print(f"📊 Report HTML: {outdir / 'diff-details.html'}")
         sys.exit(0)
     else:
         print(f"\n{YELLOW}⚠️ Sono state trovate differenze. Vedi {diffs} per i dettagli.{RESET}", file=sys.stderr)
@@ -238,8 +242,6 @@ def main():
         # Report Markdown/HTML semplici (commentati - usare diff-details invece)
         # subprocess.run(['python3', str(LIB / 'report_md.py'), str(json_out), str(diffs), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
         
-        # Report HTML interattivo dettagliato con diff campo per campo
-        subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
         sys.exit(1)
 
 
