@@ -85,7 +85,15 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
         try:
             proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if proc.returncode != 0:
-                print(f"[{context}] Warning: 'kubectl' returned non-zero for {kind} (continuo).", file=sys.stderr)
+                # Rileva errori di permessi RBAC
+                if 'Forbidden' in proc.stderr or 'forbidden' in proc.stderr:
+                    print(f"[{context}] {RED}✗{RESET} Permessi insufficienti per {kind} a livello cluster.", file=sys.stderr)
+                    if not namespace:
+                        print(f"[{context}] {YELLOW}💡 Suggerimento:{RESET} Specifica un namespace con -n <namespace>", file=sys.stderr)
+                elif proc.stderr.strip():
+                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {proc.stderr.strip()[:100]}", file=sys.stderr)
+                else:
+                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl returned non-zero for {kind} (exit code {proc.returncode})", file=sys.stderr)
                 continue
             data = json.loads(proc.stdout) if proc.stdout.strip() else {}
             items = data.get('items', [])
