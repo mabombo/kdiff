@@ -36,18 +36,18 @@ RESET = '\033[0m'
 
 def check_deps():
     if not shutil.which('kubectl'):
-        print("Errore: 'kubectl' non trovato. Installalo e riprova.", file=sys.stderr)
+        print("Error: 'kubectl' not found. Install it and try again.", file=sys.stderr)
         sys.exit(2)
 
 
 def cleanup_output_dir(outdir: Path):
-    """Pulisce la directory di output se esiste già."""
+    """Clean output directory if it already exists."""
     if outdir.exists():
         try:
             shutil.rmtree(outdir)
-            print(f"Pulizia directory output esistente: {outdir}")
+            print(f"Cleaning existing output directory: {outdir}")
         except Exception as e:
-            print(f"Warning: Impossibile pulire {outdir}: {e}", file=sys.stderr)
+            print(f"Warning: Unable to clean {outdir}: {e}", file=sys.stderr)
 
 
 # dynamic import helper to load normalize.normalize
@@ -77,34 +77,34 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
             if proc.returncode != 0:
                 stderr = proc.stderr.strip()
                 
-                # Errori CRITICI di connettività (interrompono l'esecuzione)
+                # CRITICAL connectivity errors (terminate execution)
                 if 'does not exist' in stderr:
-                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Context '{context}' non esiste in kubeconfig", file=sys.stderr)
-                    print(f"{YELLOW}💡 Suggerimento:{RESET} Verifica con 'kubectl config get-contexts'", file=sys.stderr)
+                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Context '{context}' does not exist in kubeconfig", file=sys.stderr)
+                    print(f"{YELLOW}💡 Suggestion:{RESET} Verify with 'kubectl config get-contexts'", file=sys.stderr)
                     sys.exit(2)
                 elif 'no such host' in stderr or 'dial tcp' in stderr:
-                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Impossibile connettersi al cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}💡 Cause possibili:{RESET}", file=sys.stderr)
-                    print(f"  - Cluster non raggiungibile (DNS, rete, firewall)", file=sys.stderr)
-                    print(f"  - VPN non attiva", file=sys.stderr)
-                    print(f"  - API server non disponibile", file=sys.stderr)
+                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Unable to connect to cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}💡 Possible causes:{RESET}", file=sys.stderr)
+                    print(f"  - Cluster unreachable (DNS, network, firewall)", file=sys.stderr)
+                    print(f"  - VPN not active", file=sys.stderr)
+                    print(f"  - API server unavailable", file=sys.stderr)
                     if 'no such host' in stderr:
-                        # Estrai hostname dall'errore
+                        # Extract hostname from error
                         import re
                         hostname_match = re.search(r'lookup ([^:]+):', stderr)
                         if hostname_match:
-                            print(f"  - Hostname non risolvibile: {hostname_match.group(1)}", file=sys.stderr)
+                            print(f"  - Unresolvable hostname: {hostname_match.group(1)}", file=sys.stderr)
                     sys.exit(2)
                 elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
-                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Timeout connessione al cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}💡 Suggerimento:{RESET} Verifica connettività di rete e che il cluster sia attivo", file=sys.stderr)
+                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Connection timeout to cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}💡 Suggestion:{RESET} Check network connectivity and that cluster is active", file=sys.stderr)
                     sys.exit(2)
                 
-                # Errori NON critici (permessi, risorse vuote, etc)
+                # NON-critical errors (permissions, empty resources, etc)
                 elif 'Forbidden' in stderr or 'forbidden' in stderr:
-                    print(f"[{context}] {RED}✗{RESET} Permessi insufficienti per {kind} a livello cluster.", file=sys.stderr)
+                    print(f"[{context}] {RED}✗{RESET} Insufficient permissions for {kind} at cluster level.", file=sys.stderr)
                     if not namespace:
-                        print(f"[{context}] {YELLOW}💡 Suggerimento:{RESET} Specifica un namespace con -n <namespace>", file=sys.stderr)
+                        print(f"[{context}] {YELLOW}💡 Suggestion:{RESET} Specify a namespace with -n <namespace>", file=sys.stderr)
                     has_errors = True
                 elif stderr:
                     print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
@@ -134,10 +134,10 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
             print(f"[{context}] Errore fetching {kind}: {e}", file=sys.stderr)
             continue
     
-    # Verifica finale: se non sono state recuperate risorse, potrebbe essere un problema serio
+    # Final check: if no resources retrieved, it could be a serious problem
     if resource_count == 0 and has_errors:
-        print(f"\n{RED}✗ ATTENZIONE:{RESET} Nessuna risorsa recuperata da '{context}' a causa di errori.", file=sys.stderr)
-        print(f"{YELLOW}💡 Suggerimento:{RESET} Risolvi gli errori sopra prima di continuare.", file=sys.stderr)
+        print(f"\n{RED}✗ WARNING:{RESET} No resources retrieved from '{context}' due to errors.", file=sys.stderr)
+        print(f"{YELLOW}💡 Suggestion:{RESET} Resolve errors above before continuing.", file=sys.stderr)
         return False
     
     return True
@@ -209,18 +209,18 @@ def main():
     print(f"Fetching resources from {args.c2}...")
     success2 = fetch_resources(args.c2, dir2, resources, args.n, args.show_metadata)
     
-    # Se entrambi i cluster hanno fallito il fetch, esci
+    # If both clusters failed fetch, exit
     if not success1 and not success2:
-        print(f"\n{RED}✗ ERRORE FATALE:{RESET} Impossibile recuperare risorse da entrambi i cluster.", file=sys.stderr)
+        print(f"\n{RED}✗ FATAL ERROR:{RESET} Unable to retrieve resources from both clusters.", file=sys.stderr)
         sys.exit(2)
     elif not success1:
-        print(f"\n{RED}✗ ERRORE:{RESET} Impossibile recuperare risorse da '{args.c1}'.", file=sys.stderr)
-        print(f"{YELLOW}Continuo comunque con le risorse disponibili da '{args.c2}'...{RESET}", file=sys.stderr)
+        print(f"\n{RED}✗ ERROR:{RESET} Unable to retrieve resources from '{args.c1}'.", file=sys.stderr)
+        print(f"{YELLOW}Continuing anyway with available resources from '{args.c2}'...{RESET}", file=sys.stderr)
     elif not success2:
-        print(f"\n{RED}✗ ERRORE:{RESET} Impossibile recuperare risorse da '{args.c2}'.", file=sys.stderr)
-        print(f"{YELLOW}Continuo comunque con le risorse disponibili da '{args.c1}'...{RESET}", file=sys.stderr)
+        print(f"\n{RED}✗ ERROR:{RESET} Unable to retrieve resources from '{args.c2}'.", file=sys.stderr)
+        print(f"{YELLOW}Continuing anyway with available resources from '{args.c1}'...{RESET}", file=sys.stderr)
 
-    print("Confronto...")
+    print("Comparing...")
     # call compare.py
     rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
 
@@ -228,12 +228,12 @@ def main():
     subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
 
     if rc == 0:
-        print(f"\n{GREEN}✅ I cluster sono uguali per le risorse verificate.{RESET}")
-        print(f"📊 Report HTML: {outdir / 'diff-details.html'}")
+        print(f"\n{GREEN}✅ Clusters are equal for the verified resources.{RESET}")
+        print(f"📊 HTML Report: {outdir / 'diff-details.html'}")
         sys.exit(0)
     else:
-        print(f"\n{YELLOW}⚠️ Sono state trovate differenze. Vedi {diffs} per i dettagli.{RESET}", file=sys.stderr)
-        print(f"Sintesi JSON: {json_out}")
+        print(f"\n{YELLOW}⚠️ Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
+        print(f"JSON Summary: {json_out}")
         
         # Report console (solo se richiesto formato text)
         if args.format == 'text':

@@ -1,170 +1,170 @@
-# kdiff — Confronto Intelligente Risorse Kubernetes tra Due Cluster
+# kdiff — Intelligent Kubernetes Resource Comparison Between Two Clusters
 
-## 📋 Panoramica
+## 📋 Overview
 
-**kdiff** è uno strumento Python professionale per confrontare configurazioni Kubernetes tra due cluster remoti. Identifica rapidamente risorse mancanti, differenti o presenti solo in un cluster, con supporto per diff intelligenti e report interattivi HTML.
+**kdiff** is a professional Python tool for comparing Kubernetes configurations between two remote clusters. It quickly identifies missing, different, or cluster-specific resources, with support for intelligent diffs and interactive HTML reports.
 
-### 🎯 Casi d'uso principali
+### 🎯 Main Use Cases
 
-- **Verifica configurazioni tra ambienti** (dev vs prod, staging vs prod)
-- **Audit pre-migrazione** (cluster vecchio vs nuovo)
-- **Troubleshooting differenze** tra deployment che dovrebbero essere identici
-- **Documentazione differenze** con report HTML navigabili
-- **CI/CD validation** di configurazioni tra ambienti
+- **Verify configurations across environments** (dev vs prod, staging vs prod)
+- **Pre-migration audits** (old cluster vs new)
+- **Troubleshoot differences** between deployments that should be identical
+- **Document differences** with navigable HTML reports
+- **CI/CD validation** of configurations across environments
 
-### ✨ Caratteristiche chiave
+### ✨ Key Features
 
-- ✅ **Normalizzazione intelligente**: rimuove automaticamente campi volatili (uid, resourceVersion, timestamps, etc)
-- ✅ **Diff ConfigMap intelligente**: mostra solo le linee modificate nei file di configurazione, non l'intero blob
-- ✅ **Confronto env non-posizionale**: variabili d'ambiente confrontate per nome, non per posizione nell'array
-- ✅ **Report HTML interattivi**: interfaccia web con sezioni collassabili, zoom, e visualizzazione diff inline
-- ✅ **Riduzione rumore**: labels e annotations opzionali (default: rimossi per concentrarsi su modifiche sostanziali)
-- ✅ **Cleanup automatico**: mantiene solo ultime 3 esecuzioni per risparmiare spazio
-- ✅ **Filtri flessibili**: include/escludi specifiche risorse o tipi
-- ✅ **Nomi cluster reali**: usa i nomi effettivi invece di generici "cluster1/cluster2"
+- ✅ **Intelligent normalization**: automatically removes volatile fields (uid, resourceVersion, timestamps, etc)
+- ✅ **Smart ConfigMap diff**: shows only modified lines in config files, not the entire blob
+- ✅ **Non-positional env comparison**: environment variables compared by name, not array position
+- ✅ **Interactive HTML reports**: web interface with collapsible sections, zoom, and inline diff visualization
+- ✅ **Noise reduction**: labels and annotations optional (default: removed to focus on substantial changes)
+- ✅ **Fixed output directory**: always uses `latest/` for easy refresh workflow
+- ✅ **Flexible filters**: include/exclude specific resources or types
+- ✅ **Real cluster names**: uses actual names instead of generic "cluster1/cluster2"
 
 ---
 
-## 📦 Installazione e Requisiti
+## 📦 Installation and Requirements
 
-### Requisiti
+### Requirements
 
-- **Python 3.8+** (testato su 3.8-3.13)
-- **kubectl** configurato con accesso ai cluster da confrontare
-- **Sistema operativo**: macOS, Linux (anche WSL su Windows)
+- **Python 3.8+** (tested on 3.8-3.13)
+- **kubectl** configured with access to clusters to compare
+- **Operating system**: macOS, Linux (including WSL on Windows)
 
-### Installazione
+### Installation
 
-#### Metodo 1: Installazione automatica (consigliato)
+#### Method 1: Automatic installation (recommended)
 
 ```bash
-# Scarica il repository
+# Clone repository
 git clone <repo-url>
 cd kdiff
 
-# Installa in ~/.local (non richiede sudo)
+# Install in ~/.local (no sudo required)
 PREFIX=$HOME/.local ./install.sh
 
-# Aggiungi ~/.local/bin al PATH (se non già presente)
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc  # o ~/.zshrc
-source ~/.bashrc  # o source ~/.zshrc
+# Add ~/.local/bin to PATH (if not already present)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc  # or ~/.zshrc
+source ~/.bashrc  # or source ~/.zshrc
 
-# Verifica installazione
+# Verify installation
 kdiff --help
 ```
 
-Per installazione system-wide (richiede sudo):
+For system-wide installation (requires sudo):
 
 ```bash
-sudo ./install.sh  # Installa in /usr/local
+sudo ./install.sh  # Installs in /usr/local
 ```
 
-#### Metodo 2: Installazione con pip (richiede virtual environment)
+#### Method 2: Installation with pip (requires virtual environment)
 
 ```bash
-# Crea virtual environment
+# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# Installa in modalità editable
+# Install in editable mode
 pip install -e .
 
-# Verifica
+# Verify
 kdiff --help
 ```
 
-#### Metodo 3: Uso diretto (senza installazione)
+#### Method 3: Direct usage (no installation)
 
 ```bash
-# Clona repository
+# Clone repository
 git clone <repo-url>
 cd kdiff
 
-# Usa direttamente
+# Use directly
 ./bin/kdiff --help
 ```
 
-**Nessuna dipendenza Python esterna richiesta!** Usa solo librerie standard.
+**No external Python dependencies required!** Uses only standard library.
 
-### Verifica installazione
+### Installation Verification
 
 ```bash
-# Controlla che kdiff sia installato
+# Check that kdiff is installed
 which kdiff
 
-# Verifica dipendenze
+# Verify dependencies
 python3 --version  # >= 3.8
 kubectl version --client
 
-# Esegui test
+# Run tests
 cd <repository-directory>
 bash tests/run_tests.sh
 ```
 
 ---
 
-## 🚀 Uso Rapido
+## 🚀 Quick Start
 
-### Esempio base
+### Basic example
 
 ```bash
-# Confronta due contesti kubectl (output console)
+# Compare two kubectl contexts (console output)
 ./bin/kdiff -c1 prod-cluster -c2 staging-cluster
 
-# Output JSON in directory specifica
+# JSON output in specific directory
 ./bin/kdiff -c1 prod -c2 staging -f json -o ./reports/prod-vs-staging
 ```
 
-### Esempi avanzati
+### Advanced examples
 
 ```bash
-# Solo deployment e configmap di un namespace specifico
+# Only deployments and configmaps from a specific namespace
 ./bin/kdiff -c1 prod -c2 dev \
     -n myapp \
     -r deployment,configmap
 
-# Escludi risorse specifiche
+# Exclude specific resources
 ./bin/kdiff -c1 prod -c2 staging \
     --exclude-resources deployment__ns__legacy-app
 
-# Includi Service/Ingress (normalmente esclusi per ridurre rumore)
+# Include Service/Ingress (normally excluded to reduce noise)
 ./bin/kdiff -c1 prod -c2 staging \
     --include-services-ingress
 
-# Mantieni metadata (labels/annotations) per debug dettagliato
+# Keep metadata (labels/annotations) for detailed debugging
 ./bin/kdiff -c1 prod -c2 staging \
     --show-metadata
 ```
 
 ---
 
-## 📊 Output e Report
+## 📊 Output and Reports
 
-### Struttura directory output
+### Output directory structure
 
 ```
 kdiff_output/
-└── latest/                      # ← Directory fissa (sempre la stessa)
-    ├── summary.json             # ← Summary machine-readable
-    ├── diff-details.html        # ← Report interattivo HTML ⭐
-    ├── diff-details.json        # ← Dettagli diff per automazione
-    ├── diffs/                   # ← File .diff per ogni risorsa modificata
+└── latest/                      # ← Fixed directory (always the same)
+    ├── summary.json             # ← Machine-readable summary
+    ├── diff-details.html        # ← Interactive HTML report ⭐
+    ├── diff-details.json        # ← Diff details for automation
+    ├── diffs/                   # ← .diff files for each modified resource
     │   ├── configmap__myns__app-config.json.diff
     │   └── deployment__myns__webapp.json.diff
-    ├── prod-cluster/            # ← Risorse normalizzate cluster 1
+    ├── prod-cluster/            # ← Normalized resources cluster 1
     │   ├── configmap__myns__app-config.json
     │   └── deployment__myns__webapp.json
-    └── staging-cluster/         # ← Risorse normalizzate cluster 2
+    └── staging-cluster/         # ← Normalized resources cluster 2
         ├── configmap__myns__app-config.json
         └── service__myns__webapp-svc.json
 ```
 
-**Nota importante:** kdiff usa sempre la directory `kdiff_output/latest/` (invece di creare timestamp). Questo permette di:
-- Aprire il report HTML sempre allo stesso percorso: `kdiff_output/latest/diff-details.html`
-- Aggiornare il report semplicemente con un refresh del browser (F5)
-- Evitare l'accumulo di directory vecchie
+**Important note:** kdiff always uses the `kdiff_output/latest/` directory (instead of creating timestamps). This allows:
+- Open HTML report always at the same path: `kdiff_output/latest/diff-details.html`
+- Update report simply with a browser refresh (F5)
+- Avoid accumulation of old directories
 
-La directory viene automaticamente pulita ad ogni esecuzione.
+The directory is automatically cleaned on each execution.
 
 ### 📄 summary.json
 
@@ -186,122 +186,95 @@ La directory viene automaticamente pulita ad ogni esecuzione.
 }
 ```
 
-### 🌐 Report HTML Interattivo
+### 🌐 Interactive HTML Report
 
-Il file `diff-details.html` fornisce:
+The `diff-details.html` file provides:
 
-- **Dashboard statistiche** con card colorate per ogni metrica
-- **Sezioni collassabili** per tipo risorsa (Deployment, ConfigMap, etc)
-- **Risorse expandable** con pulsante "View Diff"
-- **Modal popup** per visualizzare diff con controlli zoom (+, -, reset)
-- **Syntax highlighting** per JSON e YAML
-- **Legenda colori** per tipi di risorse
-- **Tabella risorse mancanti** cliccabile
+- **Dashboard with statistics**: total changes, resources by kind, missing resources
+- **Color-coded diff visualization**: green for additions, red for removals
+- **Modal popup for detailed diffs**: zoomable full-screen view
+- **Collapsible sections**: click to expand/collapse each resource
+- **Cluster name tooltips**: hover over diff lines to see which cluster (red=cluster1, green=cluster2)
+- **Direct links to resources**: quick navigation
 
----
+### 📋 Console Output
 
-## 📚 Risorse Gestite
+```
+K8s diff summary — Missing in staging: 1, Missing in prod: 0, Different: 3
 
-```bash
-✓ deployment          # Workload principale
-✓ statefulset         # App stateful
-✓ daemonset           # Agent system-wide
-✓ configmap           # Configurazione
-✓ secret              # Credenziali
-✓ persistentvolumeclaim  # Storage
-✓ serviceaccount      # Identity
-✓ role / rolebinding  # RBAC
-✓ horizontalpodautoscaler  # Autoscaling
-✓ cronjob / job       # Scheduled tasks
+Top resource kinds by total changes:
+- deployment: 2
+- configmap: 1
+- service: 1
 
-⚠ service / ingress   # Esclusi di default (--include-services-ingress)
+Per-kind breakdown:
+
+RESOURCE                        M2       M1       DIFF
+deployment                       1        0          1
+configmap                        0        0          1
+service                          0        0          1
 ```
 
 ---
 
-## 🧪 Testing
+## 🔧 Command Line Options
+
+### Basic Options
 
 ```bash
-# Test completi (richiede Python 3.8+)
-bash tests/run_tests.sh
-
-# Oppure direttamente con Python
-python3 tests/test_kdiff.py
-```
-
-### Coverage test suite
-
-| Test Class | Descrizione | Test count |
-|------------|-------------|------------|
-| **TestNormalize** | Normalizzazione con/senza metadata | 2 |
-| **TestEnvDictConversion** | Conversione env arrays → dict | 3 |
-| **TestConfigMapDiff** | Diff intelligente ConfigMap | 2 |
-| **TestCompare** | Rilevamento differenze | 1 |
-| **TestEndToEnd** | E2E con mock kubectl | 1 |
-| **TestReports** | Generazione report HTML | 1 |
-| **TOTALE** | | **10 test** |
-
----
-
-## 🔧 Opzioni Comando
-
-```bash
-./bin/kdiff \
-    -c1 CLUSTER1_CONTEXT \        # Context kubectl cluster 1 (richiesto)
-    -c2 CLUSTER2_CONTEXT \        # Context kubectl cluster 2 (richiesto)
-    [-n NAMESPACE] \              # Namespace specifico (default: tutti)
-    [-r RESOURCE_TYPES] \         # Lista comma-separated
-    [-o OUTPUT_DIR] \             # Directory output (default: ./kdiff_output/<timestamp>)
+kdiff -c1 CONTEXT1 -c2 CONTEXT2 \
+    [-n NAMESPACE] \              # Namespace (default: all)
+    [-r RESOURCES] \              # Resource types (comma-separated)
+    [-o OUTPUT_DIR] \             # Output directory (default: ./kdiff_output/latest)
     [-f FORMAT] \                 # text|json (default: text)
-    [--show-metadata] \           # Mantieni labels/annotations
-    [--include-services-ingress] \  # Includi Service/Ingress
-    [--exclude-resources RES1,RES2]  # Escludi risorse specifiche
+    [--show-metadata] \           # Keep labels/annotations
+    [--include-services-ingress] \  # Include Service/Ingress
+    [--exclude-resources RES1,RES2]  # Exclude specific resources
 ```
 
-Vedi `docs/usage.md` per dettagli completi.
+See `docs/usage.md` for complete details.
 
 ---
 
-## 🏗️ Architettura
+## 🏗️ Architecture
 
-### File principali
+### Main Files
 
 ```
 kdiff/
-├── bin/kdiff                    # CLI principale
+├── bin/kdiff                    # Main CLI
 ├── lib/
-│   ├── normalize.py             # Normalizzazione risorse
-│   ├── compare.py               # Confronto e diff generation
-│   ├── report.py                # Report console
-│   ├── report_md.py             # Report Markdown/HTML
-│   └── diff_details.py          # Report HTML interattivo ⭐
+│   ├── normalize.py             # Resource normalization
+│   ├── compare.py               # Comparison and diff generation
+│   ├── report.py                # Console report
+│   ├── report_md.py             # Markdown/HTML report
+│   └── diff_details.py          # Interactive HTML report ⭐
 ├── tests/
-│   ├── test_kdiff.py            # Test suite completa
+│   ├── test_kdiff.py            # Complete test suite
 │   └── run_tests.sh
 └── docs/
-    ├── usage.md                 # Guida uso dettagliata
-    └── diff_details.md          # Doc report HTML
+    ├── usage.md                 # Detailed usage guide
+    └── diff_details.md          # HTML report documentation
 ```
 
-### Flusso esecuzione
+### Execution Flow
 
 ```
-1. bin/kdiff → fetch risorse via kubectl
-2. lib/normalize.py → rimuovi campi volatili
-3. Salva JSON normalizzati
-4. lib/compare.py → genera diff (ConfigMap intelligente + standard)
-5. lib/report_md.py → report base
-6. lib/diff_details.py → report HTML interattivo
-7. Cleanup automatico (ultimi 3)
+1. bin/kdiff → fetch resources via kubectl
+2. lib/normalize.py → remove volatile fields
+3. Save normalized JSON
+4. lib/compare.py → generate diff (smart ConfigMap + standard)
+5. lib/diff_details.py → interactive HTML report
+6. Directory cleaned automatically (always latest/)
 ```
 
 ---
 
-## 🔍 Funzionalità Avanzate
+## 🔍 Advanced Features
 
-### Diff ConfigMap Intelligente
+### Smart ConfigMap Diff
 
-Invece di mostrare l'intero JSON come modificato, estrae ogni `data.*` field e lo confronta linea per linea:
+Instead of showing entire JSON as modified, extracts each `data.*` field and compares line by line:
 
 ```diff
 === data.application.yaml ===
@@ -315,39 +288,39 @@ Invece di mostrare l'intero JSON come modificato, estrae ogni `data.*` field e l
    timeout: 30s
 ```
 
-### Conversione Env Arrays → Dictionaries
+### Env Arrays → Dictionaries Conversion
 
-Variabili d'ambiente confrontate per nome, non per posizione nell'array → **nessun falso positivo** da riordinamenti.
+Environment variables compared by name, not array position → **no false positives** from reordering.
 
 ---
 
-## 🗑️ Disinstallazione
+## 🗑️ Uninstallation
 
-### Se installato con install.sh
+### If installed with install.sh
 
 ```bash
-# Installazione in ~/.local
+# Installation in ~/.local
 rm -rf ~/.local/lib/kdiff
 rm ~/.local/bin/kdiff
 
-# Installazione system-wide (/usr/local)
+# System-wide installation (/usr/local)
 sudo rm -rf /usr/local/lib/kdiff
 sudo rm /usr/local/bin/kdiff
 ```
 
-### Se installato con pip
+### If installed with pip
 
 ```bash
-# All'interno del virtual environment
+# Within virtual environment
 pip uninstall kdiff
 ```
 
 ---
 
-## 📚 Documentazione Aggiuntiva
+## 📚 Additional Documentation
 
-- [docs/usage.md](docs/usage.md) - Guida completa uso e parametri
-- [docs/diff_details.md](docs/diff_details.md) - Documentazione report HTML
+- [docs/usage.md](docs/usage.md) - Complete usage guide and parameters
+- [docs/diff_details.md](docs/diff_details.md) - HTML report documentation
 
 ---
 
@@ -355,58 +328,82 @@ pip uninstall kdiff
 
 ### kdiff: command not found
 
-Verifica che il PATH includa la directory di installazione:
+Verify that PATH includes installation directory:
 
 ```bash
-# Se installato in ~/.local
+# If installed in ~/.local
 echo $PATH | grep -o "$HOME/.local/bin"
 
-# Se non presente, aggiungi al ~/.bashrc o ~/.zshrc
+# If not present, add to ~/.bashrc or ~/.zshrc
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-### Errore "kubectl not found"
+### Error "kubectl not found"
 
 ```bash
-# Verifica installazione kubectl
+# Verify kubectl installation
 which kubectl
 
-# Su macOS (con Homebrew)
+# On macOS (with Homebrew)
 brew install kubectl
 
-# Su Linux
+# On Linux
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod +x kubectl
 sudo mv kubectl /usr/local/bin/
 ```
 
-### Python version incompatibile
+### Incompatible Python version
 
 ```bash
-# Verifica versione Python (richiede >= 3.8)
+# Verify Python version (requires >= 3.8)
 python3 --version
 
-# Su macOS con Homebrew
+# On macOS with Homebrew
 brew install python@3.11
 
-# Su Ubuntu/Debian
+# On Ubuntu/Debian
 sudo apt update
 sudo apt install python3.11
 ```
 
+### Insufficient permissions / Forbidden errors
+
+```bash
+# Error: "Forbidden: cannot list resource at cluster scope"
+# Solution: specify a namespace
+kdiff -c1 prod -c2 staging -n myapp
+
+# Verify your RBAC permissions
+kubectl auth can-i list deployments --all-namespaces
+kubectl auth can-i list deployments -n myapp
+```
+
+### Connection errors / DNS failures
+
+```bash
+# Error: "no such host" or "dial tcp" errors
+# Check:
+1. VPN connection is active
+2. Cluster API server is reachable
+3. DNS resolution works: nslookup <cluster-hostname>
+4. kubectl context is valid: kubectl config get-contexts
+5. Try accessing cluster: kubectl --context <name> get nodes
+```
+
 ---
 
-## 🤝 Contributi
+## 🤝 Contributions
 
-Suggerimenti benvenuti! Apri una issue o invia una PR.
+Suggestions welcome! Open an issue or submit a PR.
 
 ---
 
 ## 📝 License
 
-MIT License - vedi [LICENSE](LICENSE)
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
-**Versione**: 1.0.0  
-**Data ultimo aggiornamento**: Gennaio 2026
+**Version**: 1.0.0  
+**Last updated**: January 2026
