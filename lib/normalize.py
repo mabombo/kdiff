@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 """
-normalize.py - Normalizzazione risorse Kubernetes per confronto stabile
+normalize.py - Kubernetes resource normalization for stable comparison
 
-Questo modulo rimuove i campi dinamici e volatili dalle risorse Kubernetes
-per permettere un confronto deterministico tra cluster diversi.
+This module removes dynamic and volatile fields from Kubernetes resources
+to allow deterministic comparison between different clusters.
 
-Campi rimossi:
-- metadata.managedFields: gestito automaticamente da K8s
-- metadata.creationTimestamp: varia tra deploy
-- metadata.resourceVersion: interno K8s
-- metadata.uid: univoco per risorsa
-- metadata.selfLink: deprecato in K8s 1.20+
-- metadata.generation: incrementa ad ogni modifica
-- metadata.labels: rumore non necessario (opzionale con --show-metadata)
-- metadata.annotations: spesso vuote o piene di metadata interne (opzionale con --show-metadata)
-  ECCEZIONE: per Ingress vengono mantenute le annotations nginx.ingress.kubernetes.io/*
-- status: stato runtime, non parte della configurazione desiderata
-- spec.template.metadata: stessi campi per i pod template
-- spec.jobTemplate.spec.template.metadata: stessi campi per i CronJob
-- spec.clusterIP / spec.clusterIPs: per Service, varia tra ambienti (normale)
+Removed fields:
+- metadata.managedFields: automatically managed by K8s
+- metadata.creationTimestamp: varies between deployments
+- metadata.resourceVersion: K8s internal
+- metadata.uid: unique per resource
+- metadata.selfLink: deprecated in K8s 1.20+
+- metadata.generation: increments on each modification
+- metadata.labels: unnecessary noise (optional with --show-metadata)
+- metadata.annotations: often empty or full of internal metadata (optional with --show-metadata)
+  EXCEPTION: for Ingress, nginx.ingress.kubernetes.io/* annotations are kept
+- status: runtime state, not part of desired configuration
+- spec.template.metadata: same fields for pod templates
+- spec.jobTemplate.spec.template.metadata: same fields for CronJobs
+- spec.clusterIP / spec.clusterIPs: for Services, varies between environments (normal)
 
-Conversioni speciali:
-- env arrays → dict: converte array di variabili d'ambiente in dizionario
-  chiave=nome per evitare falsi positivi dovuti a riordinamenti
+Special conversions:
+- env arrays → dict: converts environment variable arrays to dictionary
+  key=name to avoid false positives due to reordering
 
-Uso: cat obj.json | python3 lib/normalize.py
-Oppure: python3 lib/normalize.py < obj.json
+Usage: cat obj.json | python3 lib/normalize.py
+Or: python3 lib/normalize.py < obj.json
 """
 import sys
 import json
@@ -33,45 +33,45 @@ import json
 
 def normalize(obj: dict, keep_metadata: bool = False) -> dict:
     """
-    Normalizza un oggetto Kubernetes rimuovendo campi volatili.
+    Normalize a Kubernetes object by removing volatile fields.
     
     Args:
-        obj: Dizionario rappresentante una risorsa Kubernetes
-        keep_metadata: Se False (default), rimuove labels e annotations vuote
-                      Se True, preserva labels e annotations (eccetto last-applied)
+        obj: Dictionary representing a Kubernetes resource
+        keep_metadata: If False (default), removes empty labels and annotations
+                      If True, preserves labels and annotations (except last-applied)
     
     Returns:
-        Dizionario normalizzato pronto per il confronto
+        Normalized dictionary ready for comparison
     
-    Comportamento:
-        - Rimuove sempre i campi dinamici (uid, resourceVersion, etc)
-        - Rimuove sempre lo status (stato runtime)
-        - Rimuove sempre clusterIP/clusterIPs dai Service (variano tra ambienti)
-        - Se keep_metadata=False: 
-          * rimuove labels per ridurre rumore
-          * rimuove annotations ECCETTO per Ingress dove mantiene nginx.ingress.kubernetes.io/*
-        - Se keep_metadata=True: mantiene labels e annotations (utile per debug)
-        - Converte sempre env arrays in dict per confronto non-posizionale
+    Behavior:
+        - Always removes dynamic fields (uid, resourceVersion, etc)
+        - Always removes status (runtime state)
+        - Always removes clusterIP/clusterIPs from Services (vary between environments)
+        - If keep_metadata=False: 
+          * removes labels to reduce noise
+          * removes annotations EXCEPT for Ingress where it keeps nginx.ingress.kubernetes.io/*
+        - If keep_metadata=True: keeps labels and annotations (useful for debugging)
+        - Always converts env arrays to dict for non-positional comparison
     """
     m = obj.get('metadata', {})
     
-    # Rimozione campi dinamici (sempre rimossi)
+    # Remove dynamic fields (always removed)
     if 'managedFields' in m:
         m.pop('managedFields', None)
     for k in ('creationTimestamp', 'resourceVersion', 'uid', 'selfLink', 'generation'):
         m.pop(k, None)
 
-    # Labels: rimuovi se non richiesto esplicitamente
+    # Labels: remove if not explicitly requested
     if not keep_metadata:
         m.pop('labels', None)
 
-    # Annotations: rimuovi se non richiesto esplicitamente
-    # ECCEZIONE: per Ingress, mantieni annotations nginx.ingress.kubernetes.io/*
+    # Annotations: remove if not explicitly requested
+    # EXCEPTION: for Ingress, keep nginx.ingress.kubernetes.io/* annotations
     if not keep_metadata:
         if obj.get('kind') == 'Ingress':
-            # Per Ingress: mantieni solo annotations nginx, rimuovi le altre
+            # For Ingress: keep only nginx annotations, remove others
             if 'annotations' in m and isinstance(m['annotations'], dict):
-                # Filtra mantenendo solo annotations nginx e rimuovendo last-applied
+                # Filter keeping only nginx annotations and removing last-applied
                 nginx_annotations = {
                     k: v for k, v in m['annotations'].items()
                     if k.startswith('nginx.ingress.kubernetes.io/') and 
@@ -82,7 +82,7 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                 else:
                     m.pop('annotations', None)
         else:
-            # Per altre risorse: rimuovi tutte le annotations
+            # For other resources: remove all annotations
             m.pop('annotations', None)
     else:
         try:
@@ -93,7 +93,7 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         except Exception:
             pass
 
-    # spec.template.metadata: rimuovi annotations e labels
+    # spec.template.metadata: remove annotations and labels
     if not keep_metadata:
         try:
             if 'spec' in obj and 'template' in obj['spec']:
@@ -107,7 +107,7 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         except Exception:
             pass
 
-    # spec.jobTemplate.spec.template.metadata per CronJob
+    # spec.jobTemplate.spec.template.metadata for CronJob
     if not keep_metadata:
         try:
             if 'spec' in obj and 'jobTemplate' in obj['spec']:
@@ -122,7 +122,7 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         except Exception:
             pass
 
-    # Converti env arrays in dizionari chiave=nome
+    # Convert env arrays to key=name dictionaries
     try:
         if 'spec' in obj and 'template' in obj['spec']:
             template_spec = obj['spec']['template'].get('spec', {})
@@ -170,10 +170,10 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         pass
 
     # ========================================
-    # Rimuovi clusterIP/clusterIPs dai Service
+    # Remove clusterIP/clusterIPs from Services
     # ========================================
-    # Gli IP dei cluster variano tra ambienti (PROD vs QA vs DEV)
-    # e non rappresentano una vera differenza di configurazione
+    # Cluster IPs vary between environments (PROD vs QA vs DEV)
+    # and don't represent a real configuration difference
     try:
         if obj.get('kind') == 'Service' and 'spec' in obj:
             obj['spec'].pop('clusterIP', None)
@@ -181,18 +181,18 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
     except Exception:
         pass
 
-    # Rimuovi status
+    # Remove status
     obj.pop('status', None)
     obj['metadata'] = m
     return obj
 
 
 def main():
-    """Entry point per uso da command-line."""
+    """Entry point for command-line usage."""
     import argparse
-    parser = argparse.ArgumentParser(description='Normalizza risorse Kubernetes')
+    parser = argparse.ArgumentParser(description='Normalize Kubernetes resources')
     parser.add_argument('--show-metadata', action='store_true',
-                       help='Mantieni labels e annotations')
+                       help='Keep labels and annotations')
     args = parser.parse_args()
 
     raw = sys.stdin.read()

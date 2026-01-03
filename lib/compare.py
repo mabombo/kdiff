@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-compare.py - Confronto directory di risorse Kubernetes normalizzate
+compare.py - Compare directories of normalized Kubernetes resources
 
-Questo script confronta due directory contenenti risorse Kubernetes normalizzate
-(in formato JSON) e produce:
-1. File diff unificati per ogni risorsa modificata
-2. JSON di summary con lista risorse mancanti/differenti
+This script compares two directories containing normalized Kubernetes resources
+(in JSON format) and produces:
+1. Unified diff files for each modified resource
+2. Summary JSON with list of missing/different resources
 
-Funzionalità speciali:
-- Diff intelligente per ConfigMap: invece di mostrare l'intero JSON come modificato,
-  estrae i campi data.* e li confronta linea per linea, mostrando solo le modifiche reali
-- Diff standard JSON per tutti gli altri tipi di risorsa
+Special features:
+- Smart diff for ConfigMap: instead of showing entire JSON as modified,
+  extracts data.* fields and compares them line by line, showing only real changes
+- Standard JSON diff for all other resource types
 
 Output:
-- diffs/*.diff: un file per ogni risorsa modificata
+- diffs/*.diff: one file for each modified resource
 - summary.json: { missing_in_2: [...], missing_in_1: [...], different: [...] }
 
 Exit code:
-- 0: nessuna differenza
-- 1: differenze rilevate
+- 0: no differences
+- 1: differences detected
 
-Uso: python3 compare.py DIR1 DIR2 DIFFS_DIR [--json-out summary.json]
+Usage: python3 compare.py DIR1 DIR2 DIFFS_DIR [--json-out summary.json]
 """
 import argparse
 from pathlib import Path
