@@ -17,10 +17,10 @@ Output:
   - diff-details.html: report HTML interattivo con UI avanzata ⭐
 
 Funzionalità HTML:
-  - Dashboard con statistiche aggregate
-  - Sezioni collassabili per tipo risorsa (Kind)
+  - Dashboard with statistics aggregate
+  - Collapsible sections per tipo risorsa (Kind)
   - Risorse individuali expandable
-  - Modal popup per visualizzare diff completi
+  - Modal popup to view complete diffs
   - Controlli zoom (+, -, reset) per diff
   - Tabella risorse presenti solo in un cluster
   - Color-coding per tipi di risorsa
@@ -165,7 +165,7 @@ def get_kind_color(kind: str) -> str:
     Ritorna un colore HEX univoco per ogni tipo di risorsa Kubernetes.
     
     Args:
-        kind: Tipo risorsa K8s (es. "Deployment", "ConfigMap", "Service")
+        kind: Type risorsa K8s (es. "Deployment", "ConfigMap", "Service")
     
     Returns:
         Codice colore HEX (es. "#2563eb")
@@ -219,8 +219,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
     
     Args:
         summary: Dizionario summary.json con liste missing_in_1 e missing_in_2
-        cluster1: Nome primo cluster
-        cluster2: Nome secondo cluster
+        cluster1: Name primo cluster
+        cluster2: Name secondo cluster
         c1_dir: Path directory risorse cluster 1
         c2_dir: Path directory risorse cluster 2
     
@@ -228,8 +228,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
         Stringa HTML con tabella formattata
     
     Tabella include:
-        - Tipo risorsa (Kind) con badge colorato
-        - Nome risorsa
+        - Type risorsa (Kind) con badge colorato
+        - Name risorsa
         - Namespace
         - Badge "Only in <cluster>" con colore distintivo
     
@@ -350,8 +350,8 @@ def main():
     
     Args (da CLI):
         outdir: Directory output con summary.json e sottodirectory cluster
-        --cluster1: Nome primo cluster (default: "cluster1")
-        --cluster2: Nome secondo cluster (default: "cluster2")
+        --cluster1: Name primo cluster (default: "cluster1")
+        --cluster2: Name secondo cluster (default: "cluster2")
     
     Exit codes:
         0: Successo
@@ -418,7 +418,7 @@ def main():
     # Cicla su ogni risorsa marcata come "different" nel summary.json
     for entry in summary.get("different", []):
         total_resources += 1
-        base = Path(entry).name  # Nome file (es. "deployment__default__myapp.json")
+        base = Path(entry).name  # Name file (es. "deployment__default__myapp.json")
         f1 = c1_dir / base
         f2 = c2_dir / base
 
@@ -574,15 +574,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         counts_top: Dizionario conteggi per top-level key
         total_resources: Numero totale risorse con differenze
         total_paths: Numero totale campi modificati
-        cluster1: Nome primo cluster
-        cluster2: Nome secondo cluster
+        cluster1: Name primo cluster
+        cluster2: Name secondo cluster
         c1_dir: Path directory cluster1
         c2_dir: Path directory cluster2
     
     Output:
         - diff-details.html: Report HTML interattivo con:
-          * Dashboard con statistiche colorate
-          * Sezioni collassabili per Kind
+          * Dashboard with statistics colorate
+          * Collapsible sections per Kind
           * Tabelle dettagliate per ogni risorsa
           * Modal popup per view diff con zoom
           * CSS gradient design (#667eea → #764ba2)
@@ -672,8 +672,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 vb = item.get('b')
                 
                 # Determina tipo modifica e badge:
-                # ➕ = Aggiunto in cluster2
-                # ➖ = Rimosso in cluster2
+                # ➕ = Added in cluster2
+                # ➖ = Removed in cluster2
                 # 🔄 = Valore modificato
                 if va is None and vb is not None:
                     icon = f'<span class="badge badge-add" title="Present in {cluster2}, not in {cluster1}">➕ Added</span>'
@@ -1589,7 +1589,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
            ===================================== */
         
         // ========================================
-        // ZOOM CONTROLS - Controlli Zoom Modal
+        // ZOOM CONTROLS - Modal Zoom Controls
         // ========================================
         let currentFontSize = 14;
         
@@ -1611,22 +1611,22 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         // ========================================
-        // DIFF MODAL - Popup View Diff
+        // DIFF MODAL - View Diff Popup
         // ========================================
         
-        // Mostra modal diff da bottone (decodifica base64)
+        // Show diff modal from button (decodifica base64)
         function showDiffFromButton(button) {{
             const base64Content = button.getAttribute('data-diff-content');
             const filename = button.getAttribute('data-filename');
             const cluster1 = button.getAttribute('data-cluster1');
             const cluster2 = button.getAttribute('data-cluster2');
             
-            // Decodifica base64 contenuto diff
+            // Decode base64 diff content
             const diffContent = atob(base64Content);
             showDiff(diffContent, filename, cluster1, cluster2);
         }}
         
-        // Mostra modal diff con formattazione colorata
+        // Show diff modal with color formatting
         function showDiff(diffContent, filename, cluster1, cluster2) {{
             const modal = document.getElementById('diffModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -1635,17 +1635,17 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             modalTitle.textContent = filename;
             
             // ========================================
-            // Formatta diff con colori per tipo riga:
+            // Format diff with colors by line type:
             // - Header (+++/---/@@): grigio
-            // - Aggiunte (+): verde
-            // - Rimozioni (-): rosso
-            // - Contesto: nero
+            // - Additions (+): verde
+            // - Removals (-): rosso
+            // - Context: nero
             // ========================================
             const lines = diffContent.split('\\n');
             let formattedHtml = '';
             
             for (const line of lines) {{
-                // Determina classe CSS in base a primo carattere
+                // Determine CSS class based on first character
                 let className = 'diff-context';
                 let tooltip = '';
                 
@@ -1659,7 +1659,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     tooltip = cluster1 || 'Cluster 1';  // Righe rosse = cluster1
                 }}
                 
-                // Escape HTML per prevenire XSS
+                // Escape HTML to prevent XSS
                 const escapedLine = line
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
@@ -1679,13 +1679,13 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             modal.style.display = 'block';
         }}
         
-        // Chiude modal diff
+        // Close diff modal
         function closeDiffModal() {{
             const modal = document.getElementById('diffModal');
             modal.style.display = 'none';
         }}
         
-        // Chiudi modal cliccando fuori dal contenuto
+        // Close modal by clicking outside content
         window.onclick = function(event) {{
             const modal = document.getElementById('diffModal');
             if (event.target === modal) {{
@@ -1738,7 +1738,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
-        // Espandi tutte le sezioni (Kind + Risorse)
+        // Expand all sections (Kind + Risorse)
         function expandAll() {{
             document.querySelectorAll('.kind-body').forEach(body => {{
                 body.classList.remove('collapsed');
