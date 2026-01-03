@@ -73,6 +73,8 @@ def load_normalize_func():
 def fetch_resources(context: str, outdir: Path, resources: list[str], namespace: str | None, show_metadata: bool = False):
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
+    has_errors = False
+    resource_count = 0
 
     for kind in resources:
         print(f"[{context}] Fetching {kind}...")
@@ -85,15 +87,43 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
         try:
             proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if proc.returncode != 0:
-                # Rileva errori di permessi RBAC
-                if 'Forbidden' in proc.stderr or 'forbidden' in proc.stderr:
+                stderr = proc.stderr.strip()
+                
+                # Errori CRITICI di connettività (interrompono l'esecuzione)
+                if 'does not exist' in stderr:
+                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Context '{context}' non esiste in kubeconfig", file=sys.stderr)
+                    print(f"{YELLOW}💡 Suggerimento:{RESET} Verifica con 'kubectl config get-contexts'", file=sys.stderr)
+                    sys.exit(2)
+                elif 'no such host' in stderr or 'dial tcp' in stderr:
+                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Impossibile connettersi al cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}💡 Cause possibili:{RESET}", file=sys.stderr)
+                    print(f"  - Cluster non raggiungibile (DNS, rete, firewall)", file=sys.stderr)
+                    print(f"  - VPN non attiva", file=sys.stderr)
+                    print(f"  - API server non disponibile", file=sys.stderr)
+                    if 'no such host' in stderr:
+                        # Estrai hostname dall'errore
+                        import re
+                        hostname_match = re.search(r'lookup ([^:]+):', stderr)
+                        if hostname_match:
+                            print(f"  - Hostname non risolvibile: {hostname_match.group(1)}", file=sys.stderr)
+                    sys.exit(2)
+                elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
+                    print(f"\n{RED}✗ ERRORE CRITICO:{RESET} Timeout connessione al cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}💡 Suggerimento:{RESET} Verifica connettività di rete e che il cluster sia attivo", file=sys.stderr)
+                    sys.exit(2)
+                
+                # Errori NON critici (permessi, risorse vuote, etc)
+                elif 'Forbidden' in stderr or 'forbidden' in stderr:
                     print(f"[{context}] {RED}✗{RESET} Permessi insufficienti per {kind} a livello cluster.", file=sys.stderr)
                     if not namespace:
                         print(f"[{context}] {YELLOW}💡 Suggerimento:{RESET} Specifica un namespace con -n <namespace>", file=sys.stderr)
-                elif proc.stderr.strip():
-                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {proc.stderr.strip()[:100]}", file=sys.stderr)
+                    has_errors = True
+                elif stderr:
+                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
+                    has_errors = True
                 else:
                     print(f"[{context}] {YELLOW}⚠{RESET}  kubectl returned non-zero for {kind} (exit code {proc.returncode})", file=sys.stderr)
+                    has_errors = True
                 continue
             data = json.loads(proc.stdout) if proc.stdout.strip() else {}
             items = data.get('items', [])
@@ -108,12 +138,21 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
                 else:
                     fname = f"{kind}__{name}.json"
                 path = outdir / fname
+                resource_count += 1
                 # pass show-metadata flag to the normalizer
                 n = norm(item, keep_metadata=bool(show_metadata))
                 path.write_text(json.dumps(n, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding='utf-8')
         except Exception as e:
             print(f"[{context}] Errore fetching {kind}: {e}", file=sys.stderr)
             continue
+    
+    # Verifica finale: se non sono state recuperate risorse, potrebbe essere un problema serio
+    if resource_count == 0 and has_errors:
+        print(f"\n{RED}✗ ATTENZIONE:{RESET} Nessuna risorsa recuperata da '{context}' a causa di errori.", file=sys.stderr)
+        print(f"{YELLOW}💡 Suggerimento:{RESET} Risolvi gli errori sopra prima di continuare.", file=sys.stderr)
+        return False
+    
+    return True
 
 
 def main():
@@ -176,10 +215,21 @@ def main():
     check_deps()
 
     print(f"Fetching resources from {args.c1}...")
-    fetch_resources(args.c1, dir1, resources, args.n, args.show_metadata)
+    success1 = fetch_resources(args.c1, dir1, resources, args.n, args.show_metadata)
 
     print(f"Fetching resources from {args.c2}...")
-    fetch_resources(args.c2, dir2, resources, args.n, args.show_metadata)
+    success2 = fetch_resources(args.c2, dir2, resources, args.n, args.show_metadata)
+    
+    # Se entrambi i cluster hanno fallito il fetch, esci
+    if not success1 and not success2:
+        print(f"\n{RED}✗ ERRORE FATALE:{RESET} Impossibile recuperare risorse da entrambi i cluster.", file=sys.stderr)
+        sys.exit(2)
+    elif not success1:
+        print(f"\n{RED}✗ ERRORE:{RESET} Impossibile recuperare risorse da '{args.c1}'.", file=sys.stderr)
+        print(f"{YELLOW}Continuo comunque con le risorse disponibili da '{args.c2}'...{RESET}", file=sys.stderr)
+    elif not success2:
+        print(f"\n{RED}✗ ERRORE:{RESET} Impossibile recuperare risorse da '{args.c2}'.", file=sys.stderr)
+        print(f"{YELLOW}Continuo comunque con le risorse disponibili da '{args.c1}'...{RESET}", file=sys.stderr)
 
     print("Confronto...")
     # call compare.py
