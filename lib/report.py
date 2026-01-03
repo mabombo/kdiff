@@ -10,7 +10,7 @@ Questo script produce un report testuale human-readable con:
 
 Input:
     - summary.json: File JSON con conteggi e liste risorse
-    - diffs/: Directory contenente file .diff generati da compare.py
+    - diffs/: Directory contenente file .diff generatesti da compare.py
 
 Output:
     - Report console colorato con ANSI escape codes
@@ -93,7 +93,7 @@ def main():
     """
     Genera report console colorato da summary.json e directory diffs.
     
-    Report include:
+    Report includes:
         1. Header con conteggi totali colorati
         2. Top N resource kinds per numero modifiche
         3. Tabella breakdown per-kind
@@ -102,7 +102,7 @@ def main():
     Args CLI:
         summary: Path a summary.json
         diffs: Path a directory diffs/
-        --top: Numero max risorse da mostrare (default: 10)
+        --top: Numero max risorse da showsre (default: 10)
         --cluster1: Nome primo cluster (default: "cluster1")
         --cluster2: Nome secondo cluster (default: "cluster2")
     """

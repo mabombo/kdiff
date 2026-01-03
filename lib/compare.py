@@ -31,54 +31,54 @@ import difflib
 
 def read_json_text(p: Path):
     """
-    Legge un file JSON e lo converte in linee di testo per il diff.
+    Reads a JSON file and converts it to text lines for diff.
     
     Args:
-        p: Path del file JSON da leggere
+        p: Path of JSON file to read
     
     Returns:
-        Lista di stringhe (linee) del JSON formattato in modo consistente
+        List of strings (lines) of consistently formatted JSON
     
-    Comportamento:
-        1. Prova a parsare come JSON e riformattare (sort_keys, indent=2)
-        2. Se fallisce, legge il file come testo raw
+    Behavior:
+        1. Try to parse as JSON and reformat (sort_keys, indent=2)
+        2. If it fails, read file as raw text
         
-    Questo garantisce che diff identiche non vengano rilevate come diverse
-    solo per formattazione diversa (spazi, ordine chiavi, etc).
+    This ensures identical diffs are not detected as different
+    only due to different formatting (spazi, ordine chiavi, etc).
     """
     try:
         txt = p.read_text(encoding='utf-8')
-        # Normalizza formattazione per diff consistenti
+        # Normalize formatting for consistent diffs
         obj = json.loads(txt)
         return json.dumps(obj, sort_keys=True, indent=2, ensure_ascii=False).splitlines(keepends=True)
     except Exception:
-        # Fallback: leggi linee raw in caso di errore parsing
+        # Fallback: read raw lines in case of parsing error
         return p.read_text(encoding='utf-8', errors='ignore').splitlines(keepends=True)
 
 
-def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
+def generateste_configmap_diff(pth1: Path, pth2: Path) -> str:
     """
-    Genera un diff più utile per ConfigMap confrontando data.* linea per linea.
+    Generate a more useful diff for ConfigMap by comparing data.* line by line.
     
-    Problema: i ConfigMap contengono spesso file di configurazione multi-linea
-    nel campo data.* (es. data.config.yaml: "chiave1: valore1\\nchiave2: valore2").
-    Un diff standard JSON mostrerebbe l'intera stringa come modificata, anche se
-    è cambiata solo una riga.
+    Problem: ConfigMaps often contain multi-line configuration files
+    in the data.* field (es. data.config.yaml: "key1: value1\\nkey2: value2").
+    A standard JSON diff would show the entire string as modified, even if
+    only one line changed.
     
-    Soluzione: estrae ogni campo data.* separatamente, splita per newline, e genera
-    un diff unified linea-per-linea per ogni campo modificato.
+    Solution: extract each data.* field separately, split by newline, and generateste
+    a unified line-by-line diff for each modified field.
     
     Args:
-        pth1: Path del ConfigMap nel cluster 1
-        pth2: Path del ConfigMap nel cluster 2
+        pth1: Path of ConfigMap in cluster 1
+        pth2: Path of ConfigMap in cluster 2
     
     Returns:
-        Stringa contenente il diff formattato, oppure None se:
-        - Non sono ConfigMap
-        - Errore durante elaborazione
-        - Nessuna differenza nei data.*
+        String containing formatted diff, or None if:
+        - Not ConfigMaps
+        - Error during processing
+        - No differences in data.*
     
-    Formato output:
+    Output format:
         --- /path/to/file1
         +++ /path/to/file2
         
@@ -86,21 +86,21 @@ def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
         --- data.config.yaml (cluster1)
         +++ data.config.yaml (cluster2)
         @@ -10,7 +10,7 @@
-         chiave1: valore1
-        -chiave2: vecchio
-        +chiave2: nuovo
-         chiave3: valore3
+         key1: value1
+        -key2: vecchio
+        +key2: nuovo
+         key3: value3
     """
     try:
-        # Carica entrambi i ConfigMap
+        # Load both ConfigMaps
         obj1 = json.loads(pth1.read_text(encoding='utf-8'))
         obj2 = json.loads(pth2.read_text(encoding='utf-8'))
         
-        # Verifica che siano effettivamente ConfigMap
+        # Verify they are actually ConfigMaps
         if obj1.get('kind') != 'ConfigMap' or obj2.get('kind') != 'ConfigMap':
             return None
         
-        # Estrai il campo data da entrambi
+        # Estrai il field data da entrambi
         data1 = obj1.get('data', {})
         data2 = obj2.get('data', {})
         
@@ -112,12 +112,12 @@ def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
         diff_lines.append(f"--- {pth1}\n")
         diff_lines.append(f"+++ {pth2}\n")
         
-        # Per ogni chiave data.*, confronta linea per linea
+        # Per ogni key data.*, compares linea per linea
         for key in all_keys:
             val1 = data1.get(key, '')
             val2 = data2.get(key, '')
             
-            # Solo se il valore è diverso
+            # Solo se il value è diverso
             if val1 != val2:
                 diff_lines.append(f"\n=== data.{key} ===\n")
                 
@@ -125,8 +125,8 @@ def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
                 lines1 = val1.split('\n')
                 lines2 = val2.split('\n')
                 
-                # Genera unified diff per questa chiave specifica
-                # n=3 = mostra 3 linee di contesto prima/dopo le modifiche
+                # Genera unified diff per questa key specifica
+                # n=3 = shows 3 linee di contesto prima/dopo le modifiche
                 key_diff = difflib.unified_diff(
                     lines1,
                     lines2,
@@ -140,7 +140,7 @@ def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
                 for line in key_diff:
                     diff_lines.append(line + '\n')
         
-        # Ritorna il diff solo se ci sono differenze (più di header)
+        # Returns il diff solo se ci sono differenze (più di header)
         return ''.join(diff_lines) if len(diff_lines) > 2 else None
         
     except Exception as e:
@@ -156,8 +156,8 @@ def main():
         1. Scansiona tutti i .json in dir1
         2. Per ogni file, cerca corrispondente in dir2
         3. Se manca in dir2 → missing_in_2
-        4. Se esiste in entrambi, confronta:
-           a. ConfigMap? → usa generate_configmap_diff
+        4. Se esiste in entrambi, compares:
+           a. ConfigMap? → usa generateste_configmap_diff
            b. Altro? → usa diff JSON standard
         5. Scansiona dir2 per file che non esistono in dir1 → missing_in_1
         6. Genera summary.json con statistiche
@@ -166,11 +166,11 @@ def main():
         dir1: Directory con risorse cluster 1 (normalizzate)
         dir2: Directory con risorse cluster 2 (normalizzate)
         diffs: Directory output per file .diff
-        --json-out: Path per salvare summary.json
+        --json-out: Path per savesre summary.json
     
     Exit code:
-        0: nessuna differenza rilevata
-        1: differenze rilevate (normale quando ci sono diff)
+        0: no differences rilevata
+        1: differences detected (normale quando ci sono diff)
     """
     # ============================================
     # PARSING ARGOMENTI
@@ -183,7 +183,7 @@ def main():
     p.add_argument('dir2', help='Directory con risorse del cluster 2')
     p.add_argument('diffs', help='Directory output per i file diff')
     p.add_argument('--json-out', dest='json_out', default=None,
-                   help='Path per salvare summary.json')
+                   help='Path per savesre summary.json')
     args = p.parse_args()
 
     # Converti a Path per gestione filesystem
@@ -214,10 +214,10 @@ def main():
             missing_in_2.append(rel)
             continue
         
-        # Caso 2: file esiste in entrambi, confronta contenuto
+        # Caso 2: file esiste in entrambi, compares contenuto
         
         # Prova prima con diff intelligente per ConfigMap
-        configmap_diff = generate_configmap_diff(pth, other)
+        configmap_diff = generateste_configmap_diff(pth, other)
         
         if configmap_diff:
             # È un ConfigMap E ha differenze
@@ -263,7 +263,7 @@ def main():
             'missing_in_1': len(missing_in_1),
             'different': len(different),
         },
-        'by_kind': {}  # Statistiche per tipo risorsa (deployment, configmap, etc)
+        'by_kind': {}  # Statistiche per tipo resource (deployment, configmap, etc)
     }
 
     # Helper per estrarre il kind dal nome file (es. "deployment__ns__app.json" → "deployment")

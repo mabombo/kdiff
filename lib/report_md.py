@@ -9,7 +9,7 @@ Questo script produce due file di report testuale:
 Input:
     - summary.json: File JSON con statistiche aggregate
     - diffs/: Directory con file .diff
-    - outdir: Directory output per report generati
+    - outdir: Directory output per report generatesti
 
 Output:
     - report.md: Markdown con statistiche, breakdown, sample diffs
@@ -26,7 +26,7 @@ Esempio:
 
 Nota:
     - Questo è un report testuale semplificato
-    - Per report HTML avanzato: usare diff_details.py che genera HTML interattivo
+    - Per report HTML avanzato: usare diff_details.py che generates HTML interattivo
 """
 import argparse
 import json
@@ -67,9 +67,9 @@ def main():
     """
     Genera report.md e report.html da summary.json e diffs/.
     
-    Report Markdown include:
+    Report Markdown includes:
         1. Header con statistiche aggregate
-        2. Timestamp generazione
+        2. Timestamp generateszione
         3. Top resource kinds ordinati per total changes
         4. Tabella breakdown per-kind
         5. Sample diffs (prime 10 risorse differenti)
