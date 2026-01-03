@@ -35,20 +35,71 @@
 
 ### Installazione
 
+#### Metodo 1: Installazione automatica (consigliato)
+
 ```bash
-# Clone repository
+# Scarica il repository
 git clone <repo-url>
 cd kdiff
+
+# Installa in ~/.local (non richiede sudo)
+PREFIX=$HOME/.local ./install.sh
+
+# Aggiungi ~/.local/bin al PATH (se non già presente)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc  # o ~/.zshrc
+source ~/.bashrc  # o source ~/.zshrc
+
+# Verifica installazione
+kdiff --help
+```
+
+Per installazione system-wide (richiede sudo):
+
+```bash
+sudo ./install.sh  # Installa in /usr/local
+```
+
+#### Metodo 2: Installazione con pip (richiede virtual environment)
+
+```bash
+# Crea virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Installa in modalità editable
+pip install -e .
+
+# Verifica
+kdiff --help
+```
+
+#### Metodo 3: Uso diretto (senza installazione)
+
+```bash
+# Clona repository
+git clone <repo-url>
+cd kdiff
+
+# Usa direttamente
+./bin/kdiff --help
+```
+
+**Nessuna dipendenza Python esterna richiesta!** Usa solo librerie standard.
+
+### Verifica installazione
+
+```bash
+# Controlla che kdiff sia installato
+which kdiff
 
 # Verifica dipendenze
 python3 --version  # >= 3.8
 kubectl version --client
 
-# Test funzionamento
+# Esegui test
+cd <repository-directory>
 bash tests/run_tests.sh
 ```
-
-**Nessuna dipendenza Python esterna richiesta!** Usa solo librerie standard.
 
 ---
 
@@ -266,11 +317,92 @@ Variabili d'ambiente confrontate per nome, non per posizione nell'array → **ne
 
 ---
 
+## 🗑️ Disinstallazione
+
+### Se installato con install.sh
+
+```bash
+# Installazione in ~/.local
+rm -rf ~/.local/lib/kdiff
+rm ~/.local/bin/kdiff
+
+# Installazione system-wide (/usr/local)
+sudo rm -rf /usr/local/lib/kdiff
+sudo rm /usr/local/bin/kdiff
+```
+
+### Se installato con pip
+
+```bash
+# All'interno del virtual environment
+pip uninstall kdiff
+```
+
+---
+
+## 📚 Documentazione Aggiuntiva
+
+- [docs/usage.md](docs/usage.md) - Guida completa uso e parametri
+- [docs/diff_details.md](docs/diff_details.md) - Documentazione report HTML
+
+---
+
+## 🐛 Troubleshooting
+
+### kdiff: command not found
+
+Verifica che il PATH includa la directory di installazione:
+
+```bash
+# Se installato in ~/.local
+echo $PATH | grep -o "$HOME/.local/bin"
+
+# Se non presente, aggiungi al ~/.bashrc o ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Errore "kubectl not found"
+
+```bash
+# Verifica installazione kubectl
+which kubectl
+
+# Su macOS (con Homebrew)
+brew install kubectl
+
+# Su Linux
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+
+### Python version incompatibile
+
+```bash
+# Verifica versione Python (richiede >= 3.8)
+python3 --version
+
+# Su macOS con Homebrew
+brew install python@3.11
+
+# Su Ubuntu/Debian
+sudo apt update
+sudo apt install python3.11
+```
+
+---
+
 ## 🤝 Contributi
 
 Suggerimenti benvenuti! Apri una issue o invia una PR.
 
 ---
 
-**Versione**: 2.0  
+## 📝 License
+
+MIT License - vedi [LICENSE](LICENSE)
+
+---
+
+**Versione**: 1.0.0  
 **Data ultimo aggiornamento**: Gennaio 2026

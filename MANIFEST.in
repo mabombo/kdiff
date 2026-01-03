@@ -1,0 +1,20 @@
+# MANIFEST.in - Include file non-Python nel package
+
+# Documentazione
+include README.md
+include LICENSE
+recursive-include docs *.md
+
+# Test fixtures
+recursive-include tests/fixtures *.json
+
+# Script
+recursive-include bin *
+
+# Escludi file non necessari
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude *.bak
+global-exclude *.broken
+global-exclude .DS_Store
+prune kdiff_output

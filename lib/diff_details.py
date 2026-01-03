@@ -529,9 +529,9 @@ def main():
     # 7. SCRITTURA FILE OUTPUT
     # ========================================
     
-    # 7.1 Salva Markdown Report
-    md_text = "\n".join(md_lines)
-    (outdir / "diff-details.md").write_text(md_text, encoding="utf-8")
+    # 7.1 Salva Markdown Report (commentato - mantenere solo HTML)
+    # md_text = "\n".join(md_lines)
+    # (outdir / "diff-details.md").write_text(md_text, encoding="utf-8")
 
     # 7.2 Salva JSON Report (strutturato per integrazione)
     json_output = {
@@ -554,7 +554,7 @@ def main():
         c1_dir, c2_dir
     )
 
-    print(f"Wrote detailed diff report: {outdir / 'diff-details.md'} and {outdir / 'diff-details.html'}")
+    print(f"Wrote detailed diff report: {outdir / 'diff-details.html'}")
 
 
 

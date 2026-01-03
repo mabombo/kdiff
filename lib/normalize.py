@@ -14,9 +14,11 @@ Campi rimossi:
 - metadata.generation: incrementa ad ogni modifica
 - metadata.labels: rumore non necessario (opzionale con --show-metadata)
 - metadata.annotations: spesso vuote o piene di metadata interne (opzionale con --show-metadata)
+  ECCEZIONE: per Ingress vengono mantenute le annotations nginx.ingress.kubernetes.io/*
 - status: stato runtime, non parte della configurazione desiderata
 - spec.template.metadata: stessi campi per i pod template
 - spec.jobTemplate.spec.template.metadata: stessi campi per i CronJob
+- spec.clusterIP / spec.clusterIPs: per Service, varia tra ambienti (normale)
 
 Conversioni speciali:
 - env arrays → dict: converte array di variabili d'ambiente in dizionario
@@ -44,7 +46,10 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
     Comportamento:
         - Rimuove sempre i campi dinamici (uid, resourceVersion, etc)
         - Rimuove sempre lo status (stato runtime)
-        - Se keep_metadata=False: rimuove labels e annotations per ridurre rumore
+        - Rimuove sempre clusterIP/clusterIPs dai Service (variano tra ambienti)
+        - Se keep_metadata=False: 
+          * rimuove labels per ridurre rumore
+          * rimuove annotations ECCETTO per Ingress dove mantiene nginx.ingress.kubernetes.io/*
         - Se keep_metadata=True: mantiene labels e annotations (utile per debug)
         - Converte sempre env arrays in dict per confronto non-posizionale
     """
@@ -61,8 +66,24 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         m.pop('labels', None)
 
     # Annotations: rimuovi se non richiesto esplicitamente
+    # ECCEZIONE: per Ingress, mantieni annotations nginx.ingress.kubernetes.io/*
     if not keep_metadata:
-        m.pop('annotations', None)
+        if obj.get('kind') == 'Ingress':
+            # Per Ingress: mantieni solo annotations nginx, rimuovi le altre
+            if 'annotations' in m and isinstance(m['annotations'], dict):
+                # Filtra mantenendo solo annotations nginx e rimuovendo last-applied
+                nginx_annotations = {
+                    k: v for k, v in m['annotations'].items()
+                    if k.startswith('nginx.ingress.kubernetes.io/') and 
+                       k != 'kubectl.kubernetes.io/last-applied-configuration'
+                }
+                if nginx_annotations:
+                    m['annotations'] = nginx_annotations
+                else:
+                    m.pop('annotations', None)
+        else:
+            # Per altre risorse: rimuovi tutte le annotations
+            m.pop('annotations', None)
     else:
         try:
             if 'annotations' in m and isinstance(m['annotations'], dict):
@@ -145,6 +166,18 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                                 env_copy = {k: v for k, v in env_var.items() if k != 'name'}
                                 env_dict[env_var['name']] = env_copy
                         container['env'] = env_dict
+    except Exception:
+        pass
+
+    # ========================================
+    # Rimuovi clusterIP/clusterIPs dai Service
+    # ========================================
+    # Gli IP dei cluster variano tra ambienti (PROD vs QA vs DEV)
+    # e non rappresentano una vera differenza di configurazione
+    try:
+        if obj.get('kind') == 'Service' and 'spec' in obj:
+            obj['spec'].pop('clusterIP', None)
+            obj['spec'].pop('clusterIPs', None)
     except Exception:
         pass
 

@@ -410,10 +410,11 @@ fi
             # Should have 1 different (configmap "a")
             self.assertEqual(len(summary['different']), 1)
             
-            # Check reports were generated
-            self.assertTrue((out_dir / 'report.md').exists())
-            self.assertTrue((out_dir / 'report.html').exists())
-            self.assertTrue((out_dir / 'diff-details.md').exists())
+            # Check reports were generated (solo diff-details.html ora)
+            # report.md/html e diff-details.md sono commentati
+            # self.assertTrue((out_dir / 'report.md').exists())
+            # self.assertTrue((out_dir / 'report.html').exists())
+            # self.assertTrue((out_dir / 'diff-details.md').exists())
             self.assertTrue((out_dir / 'diff-details.html').exists())
 
 
