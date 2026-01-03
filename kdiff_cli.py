@@ -34,32 +34,20 @@ RED = '\033[0;31m'
 RESET = '\033[0m'
 
 
-def timestamp():
-    return datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-
-
 def check_deps():
     if not shutil.which('kubectl'):
         print("Errore: 'kubectl' non trovato. Installalo e riprova.", file=sys.stderr)
         sys.exit(2)
 
 
-def cleanup_old_outputs(base_dir: Path, keep_last: int = 3):
-    """Keep only the last N timestamped output directories."""
-    if not base_dir.exists():
-        return
-    # Get all timestamped subdirectories (format: YYYYMMDDTHHMMSSZ)
-    subdirs = [d for d in base_dir.iterdir() if d.is_dir() and d.name[0].isdigit()]
-    if len(subdirs) <= keep_last:
-        return
-    # Sort by name (timestamp) and remove oldest
-    subdirs.sort()
-    for old_dir in subdirs[:-keep_last]:
+def cleanup_output_dir(outdir: Path):
+    """Pulisce la directory di output se esiste già."""
+    if outdir.exists():
         try:
-            shutil.rmtree(old_dir)
-            print(f"Removed old output: {old_dir.name}")
+            shutil.rmtree(outdir)
+            print(f"Pulizia directory output esistente: {outdir}")
         except Exception as e:
-            print(f"Warning: Could not remove {old_dir}: {e}", file=sys.stderr)
+            print(f"Warning: Impossibile pulire {outdir}: {e}", file=sys.stderr)
 
 
 # dynamic import helper to load normalize.normalize
@@ -200,11 +188,12 @@ def main():
             print("Error: All resources excluded. Nothing to compare.", file=sys.stderr)
             sys.exit(2)
 
-    # Cleanup old outputs before creating new one
-    if not args.o:
-        cleanup_old_outputs(Path('./kdiff_output'), keep_last=3)
+    # Usa sempre la stessa directory per output (latest)
+    outdir = Path(args.o) if args.o else Path('./kdiff_output/latest')
     
-    outdir = Path(args.o) if args.o else Path('./kdiff_output') / timestamp()
+    # Pulisce la directory se esiste già
+    cleanup_output_dir(outdir)
+    
     # Use actual cluster names instead of generic cluster1/cluster2
     dir1 = outdir / args.c1
     dir2 = outdir / args.c2

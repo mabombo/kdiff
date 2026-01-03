@@ -144,23 +144,27 @@ bash tests/run_tests.sh
 
 ```
 kdiff_output/
-└── 20260103T153045Z/           # Timestamp esecuzione
+└── latest/                      # ← Directory fissa (sempre la stessa)
     ├── summary.json             # ← Summary machine-readable
-    ├── report.md                # ← Report markdown
-    ├── report.html              # ← Report HTML base
-    ├── diff-details.md          # ← Report dettagliato markdown
     ├── diff-details.html        # ← Report interattivo HTML ⭐
     ├── diff-details.json        # ← Dettagli diff per automazione
     ├── diffs/                   # ← File .diff per ogni risorsa modificata
     │   ├── configmap__myns__app-config.json.diff
     │   └── deployment__myns__webapp.json.diff
-    ├── prod-cluster/            # ← Risorse normalizzate cluster 1
+    ├── REEVO-BMW-PROD/          # ← Risorse normalizzate cluster 1
     │   ├── configmap__myns__app-config.json
     │   └── deployment__myns__webapp.json
-    └── staging-cluster/         # ← Risorse normalizzate cluster 2
+    └── REEVO-BMW-QA/            # ← Risorse normalizzate cluster 2
         ├── configmap__myns__app-config.json
         └── service__myns__webapp-svc.json
 ```
+
+**Nota importante:** kdiff usa sempre la directory `kdiff_output/latest/` (invece di creare timestamp). Questo permette di:
+- Aprire il report HTML sempre allo stesso percorso: `kdiff_output/latest/diff-details.html`
+- Aggiornare il report semplicemente con un refresh del browser (F5)
+- Evitare l'accumulo di directory vecchie
+
+La directory viene automaticamente pulita ad ogni esecuzione.
 
 ### 📄 summary.json
 
