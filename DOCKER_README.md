@@ -1,7 +1,7 @@
 # kdiff - Kubernetes Cluster Comparison Tool
 
-![Docker Image Size](https://img.shields.io/docker/image-size/YOUR_DOCKERHUB_USERNAME/kdiff)
-![Docker Pulls](https://img.shields.io/docker/pulls/YOUR_DOCKERHUB_USERNAME/kdiff)
+![Docker Image Size](https://img.shields.io/docker/image-size/mabombo/kdiff)
+![Docker Pulls](https://img.shields.io/docker/pulls/mabombo/kdiff)
 
 kdiff is a powerful command-line tool for comparing Kubernetes resources between two clusters or contexts. It generates detailed HTML reports showing differences in deployments, configmaps, secrets, and other resources.
 
@@ -21,7 +21,7 @@ kdiff is a powerful command-line tool for comparing Kubernetes resources between
 docker run --rm -it \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
-  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  mabombo/kdiff:latest \
   -c1 prod-cluster -c2 staging-cluster -n myapp
 ```
 
@@ -44,7 +44,7 @@ chmod +x kdiff-docker
 docker run --rm -it \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
-  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  mabombo/kdiff:latest \
   -c1 production -c2 staging -n myapp
 ```
 
@@ -53,7 +53,7 @@ docker run --rm -it \
 docker run --rm -it \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
-  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  mabombo/kdiff:latest \
   -c1 prod -c2 staging -n myapp \
   --include-resource-types deployment,configmap
 ```
@@ -63,7 +63,7 @@ docker run --rm -it \
 docker run --rm -it \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
-  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  mabombo/kdiff:latest \
   -c1 prod -c2 staging -n myapp \
   --include-services-ingress
 ```
@@ -73,7 +73,7 @@ docker run --rm -it \
 docker run --rm -it \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
-  YOUR_DOCKERHUB_USERNAME/kdiff:latest \
+  mabombo/kdiff:latest \
   -c1 prod -c2 staging -n myapp \
   --show-metadata
 ```
@@ -130,7 +130,7 @@ Reports are generated in `/app/kdiff_output/latest/`:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/kdiff.git
+git clone https://github.com/mabombo/kdiff.git
 cd kdiff
 
 # Build the Docker image
@@ -163,8 +163,8 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues, questions, or contributions, please visit:
-- GitHub: https://github.com/YOUR_USERNAME/kdiff
-- Issues: https://github.com/YOUR_USERNAME/kdiff/issues
+- GitHub: https://github.com/mabombo/kdiff
+- Issues: https://github.com/mabombo/kdiff/issues
 
 ## Version
 
