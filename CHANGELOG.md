@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-01-04
+
 ### Added
 - **Side-by-side diff visualization** in HTML reports (VS Code style)
   * New "Side-by-Side" button for each resource with differences
@@ -17,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Red background: lines only in QA (removed)
     - Green background: lines only in PROD (added)  
     - Blue background: lines modified between clusters
-  * Zoom controls (+, -, 100%) for adjusting font size
+  * Zoom controls (+, ⟲, -) for adjusting font size with icons matching View Diff
   * Proper handling of embedded newlines (\\n → actual line breaks)
   * Smart block merging: combines removed+added pairs into modified entries
   * Handles diff blocks of different sizes correctly
@@ -25,8 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Line numbers on both sides for easy reference
   * Full JSON content comparison with proper alignment
 
+### Improved
+- **Enhanced clickability of "Resources Only in One Cluster" card**
+  * Added professional SVG eye icon in top-right corner
+  * Improved hover effects: enhanced lift, colored shadow, border expansion
+  * Added "Click to view details" hint that changes color on hover
+  * Icon scales and brightens on hover for better user feedback
+  * Makes it immediately clear the card is interactive
+
 ### Changed
-- Nothing yet
+- UI consistency: Side-by-side modal buttons now match View Diff modal style
 
 ### Fixed
 - Nothing yet
