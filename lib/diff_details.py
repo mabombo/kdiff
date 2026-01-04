@@ -966,8 +966,34 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         /* Colori bordo sinistro per tipo card */
         .stat-card.resources {{ border-left-color: #3b82f6; }}  /* Blu */
         .stat-card.changes {{ border-left-color: #f59e0b; }}    /* Arancione */
-        .stat-card.missing {{ border-left-color: #dc2626; cursor: pointer; }}  /* Rosso */
-        .stat-card.missing:hover {{ background: #fef2f2; }}
+        .stat-card.missing {{ 
+            border-left-color: #dc2626; 
+            cursor: pointer;
+            position: relative;
+        }}  /* Rosso */
+        .stat-card.missing:hover {{ 
+            background: #fef2f2;
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
+            border-left-width: 6px;
+        }}
+        .stat-card.missing::after {{
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 24px;
+            height: 24px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'%3E%3C/path%3E%3Ccircle cx='12' cy='12' r='3'%3E%3C/circle%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0.5;
+            transition: all 0.3s;
+        }}
+        .stat-card.missing:hover::after {{
+            opacity: 1;
+            transform: scale(1.15);
+        }}
         
         .stat-card .stat-label {{
             font-size: 0.9em;
@@ -975,6 +1001,23 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
+        }}
+        .stat-card.missing .stat-label {{
+            padding-right: 40px;
+        }}
+        .stat-card .stat-hint {{
+            font-size: 0.75em;
+            color: #9ca3af;
+            margin-top: 8px;
+            font-weight: 400;
+            font-style: italic;
+        }}
+        .stat-card.missing .stat-hint {{
+            transition: color 0.3s;
+        }}
+        .stat-card.missing:hover .stat-hint {{
+            color: #dc2626;
+            font-weight: 500;
         }}
         
         /* Valore numerico con gradient text */
@@ -2298,6 +2341,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <div class="stat-card missing" onclick="toggleMissingResources()" title="Click to view details">
                 <div class="stat-label">Resources Only in One Cluster</div>
                 <div class="stat-value">{summary['counts']['missing_in_1'] + summary['counts']['missing_in_2']}</div>
+                <div class="stat-hint">Click to view details</div>
             </div>
         </div>
         
