@@ -73,5 +73,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kubeconfig mounted read-only in containers
 - kubectl v1.35.0 included in Docker image
 
-[Unreleased]: https://github.com/YOUR_USERNAME/kdiff/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/YOUR_USERNAME/kdiff/releases/tag/v1.0.0
+[Unreleased]: https://github.com/mabombo/kdiff/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/mabombo/kdiff/releases/tag/v1.0.0

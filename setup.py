@@ -82,8 +82,8 @@ setup(
     
     # Metadati progetto
     project_urls={
-        "Bug Reports": "https://github.com/maurocasiraghi/kdiff/issues",
-        "Source": "https://github.com/maurocasiraghi/kdiff",
-        "Documentation": "https://github.com/maurocasiraghi/kdiff/blob/main/README.md",
+        "Bug Reports": "https://github.com/mabombo/kdiff/issues",
+        "Source": "https://github.com/mabombo/kdiff",
+        "Documentation": "https://github.com/mabombo/kdiff/blob/main/README.md",
     },
 )

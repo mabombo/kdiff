@@ -277,7 +277,7 @@ main() {
     echo "  • Docker image: $DOCKER_USERNAME/kdiff:latest"
     echo ""
     info "🔗 Next steps:"
-    echo "  • Create GitHub release: https://github.com/YOUR_USERNAME/kdiff/releases/new?tag=v$version"
+    echo "  • Create GitHub release: https://github.com/mabombo/kdiff/releases/new?tag=v$version"
     echo "  • Update Docker Hub description if needed"
     echo "  • Announce the release"
     echo ""

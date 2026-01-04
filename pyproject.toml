@@ -52,10 +52,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/maurocasiraghi/kdiff"
-Documentation = "https://github.com/maurocasiraghi/kdiff/blob/main/README.md"
-Source = "https://github.com/maurocasiraghi/kdiff"
-"Bug Reports" = "https://github.com/maurocasiraghi/kdiff/issues"
+Homepage = "https://github.com/mabombo/kdiff"
+Documentation = "https://github.com/mabombo/kdiff/blob/main/README.md"
+Source = "https://github.com/mabombo/kdiff"
+"Bug Reports" = "https://github.com/mabombo/kdiff/issues"
 
 [project.scripts]
 kdiff = "kdiff_cli:main"

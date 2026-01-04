@@ -21,7 +21,7 @@ We use a simple but effective branching model:
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/kdiff.git
+   git clone https://github.com/mabombo/kdiff.git
    cd kdiff
    ```
 
