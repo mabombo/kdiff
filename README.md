@@ -18,6 +18,10 @@
 - ✅ **Smart ConfigMap diff**: shows only modified lines in config files, not the entire blob
 - ✅ **Non-positional env comparison**: environment variables compared by name, not array position
 - ✅ **Interactive HTML reports**: web interface with collapsible sections, zoom, and inline diff visualization
+- ✅ **Side-by-side diff viewer**: VS Code-style dual-pane comparison with synchronized scrolling
+  * Line-by-line comparison with color highlighting (red/green/blue)
+  * Powered by [jsdiff](https://github.com/kpdecker/jsdiff) for robust diff algorithm
+  * Zoom controls and proper alignment even with complex diffs
 - ✅ **Noise reduction**: labels and annotations optional (default: removed to focus on substantial changes)
 - ✅ **Fixed output directory**: always uses `latest/` for easy refresh workflow
 - ✅ **Flexible filters**: include/exclude specific resources or types

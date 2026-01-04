@@ -8,7 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- **Side-by-side diff visualization** in HTML reports (VS Code style)
+  * New "Side-by-Side" button for each resource with differences
+  * Two-pane layout with perfect 50/50 split
+  * Integrated **jsdiff library** for robust line-by-line comparison algorithm
+  * Synchronized scrolling between left (QA) and right (PROD) panes
+  * Color coding:
+    - Red background: lines only in QA (removed)
+    - Green background: lines only in PROD (added)  
+    - Blue background: lines modified between clusters
+  * Zoom controls (+, -, 100%) for adjusting font size
+  * Proper handling of embedded newlines (\\n → actual line breaks)
+  * Smart block merging: combines removed+added pairs into modified entries
+  * Handles diff blocks of different sizes correctly
+  * Dark theme matching VS Code interface
+  * Line numbers on both sides for easy reference
+  * Full JSON content comparison with proper alignment
 
 ### Changed
 - Nothing yet
