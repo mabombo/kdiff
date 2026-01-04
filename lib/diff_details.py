@@ -1876,9 +1876,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const json1 = atob(json1Base64);
             const json2 = atob(json2Base64);
             
-            // Split into lines
-            const lines1 = json1.split('\\n');
-            const lines2 = json2.split('\\n');
+            // Split into lines - use single backslash for actual newline
+            const lines1 = json1.split('\n');
+            const lines2 = json2.split('\n');
             
             // Compute diff
             const diff = computeLineDiff(lines1, lines2);
@@ -1941,33 +1941,35 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 let cssClass = '';
                 
                 if (lineContent === null) {{
-                    // Empty line placeholder
+                    // Empty line placeholder for alignment
                     html += `<div class="code-line" style="background: #2d2d2d;">
                                 <span class="code-line-number"></span>
                                 <span class="code-line-content">&nbsp;</span>
                              </div>`;
-                    return;
+                    // Don't return, continue to next item
+                }} else {{
+                    // Determine CSS class based on diff type
+                    if (item.type === 'added' && side === 'right') {{
+                        cssClass = 'added';
+                    }} else if (item.type === 'removed' && side === 'left') {{
+                        cssClass = 'removed';
+                    }} else if (item.type === 'modified') {{
+                        cssClass = 'modified';
+                    }}
+                    
+                    // Escape HTML to prevent XSS
+                    const escapedLine = lineContent
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                    
+                    html += `<div class="code-line ${{cssClass}}">
+                                <span class="code-line-number">${{lineNum || ''}}</span>
+                                <span class="code-line-content">${{escapedLine || '&nbsp;'}}</span>
+                             </div>`;
                 }}
-                
-                if (item.type === 'added' && side === 'right') {{
-                    cssClass = 'added';
-                }} else if (item.type === 'removed' && side === 'left') {{
-                    cssClass = 'removed';
-                }} else if (item.type === 'modified') {{
-                    cssClass = 'modified';
-                }}
-                
-                const escapedLine = lineContent
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#039;');
-                
-                html += `<div class="code-line ${{cssClass}}">
-                            <span class="code-line-number">${{lineNum || ''}}</span>
-                            <span class="code-line-content">${{escapedLine || '&nbsp;'}}</span>
-                         </div>`;
             }});
             
             return html;
