@@ -867,6 +867,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>kdiff - Detailed Comparison Report</title>
+    
+    <!-- jsdiff library for robust diff algorithm -->
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
+    
     <style>
         /* =====================================
            CSS RESET E STILI BASE
@@ -1645,14 +1649,49 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             flex-direction: column;
         }}
         
+        .sidebyside-modal-header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        
+        .zoom-controls {{
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }}
+        
+        .zoom-btn {{
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            min-width: 36px;
+        }}
+        
+        .zoom-btn:hover {{
+            background: rgba(255,255,255,0.3);
+        }}
+        
         .sidebyside-container {{
             display: flex;
-            height: 100%;
+            flex-direction: row;
+            flex: 1;
+            min-height: 0;
             overflow: hidden;
         }}
         
         .sidebyside-pane {{
-            flex: 1;
+            width: 50%;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             border-right: 2px solid #3d3d3d;
@@ -1691,13 +1730,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             font-size: 13px;
             line-height: 1.6;
             background: #1e1e1e;
+            min-height: 0;
         }}
         
         .code-line {{
             padding: 0 20px;
             min-height: 20px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
         }}
         
         .code-line-number {{
@@ -1706,13 +1746,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             color: #858585;
             text-align: right;
             padding-right: 15px;
+            padding-top: 0;
             user-select: none;
             flex-shrink: 0;
         }}
         
         .code-line-content {{
             color: #d4d4d4;
-            white-space: pre;
+            white-space: pre-wrap;
+            word-wrap: break-word;
             flex: 1;
         }}
         
@@ -1862,8 +1904,32 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         // ========================================
-        // SIDE-BY-SIDE DIFF - VS Code Style Comparison
+        // SIDE-BY-SIDE DIFF - Full File Comparison
         // ========================================
+        
+        let sideBySideFontSize = 13;
+        
+        function zoomInSideBySide() {{
+            sideBySideFontSize += 2;
+            applySideBySideZoom();
+        }}
+        
+        function zoomOutSideBySide() {{
+            if (sideBySideFontSize > 8) {{
+                sideBySideFontSize -= 2;
+                applySideBySideZoom();
+            }}
+        }}
+        
+        function resetZoomSideBySide() {{
+            sideBySideFontSize = 13;
+            applySideBySideZoom();
+        }}
+        
+        function applySideBySideZoom() {{
+            document.getElementById('sideBySideLeftPane').style.fontSize = sideBySideFontSize + 'px';
+            document.getElementById('sideBySideRightPane').style.fontSize = sideBySideFontSize + 'px';
+        }}
         
         function showSideBySideDiff(button) {{
             const json1Base64 = button.getAttribute('data-json1');
@@ -1873,15 +1939,28 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const cluster2 = button.getAttribute('data-cluster2');
             
             // Decode base64 JSON content
-            const json1 = atob(json1Base64);
-            const json2 = atob(json2Base64);
+            const json1Raw = atob(json1Base64);
+            const json2Raw = atob(json2Base64);
             
-            // Split into lines - use single backslash for actual newline
-            const lines1 = json1.split('\n');
-            const lines2 = json2.split('\n');
+            // Parse and pretty-print JSON, then expand \\n sequences
+            let json1Pretty, json2Pretty;
+            try {{
+                const obj1 = JSON.parse(json1Raw);
+                json1Pretty = JSON.stringify(obj1, null, 2);
+                // Replace literal \\n with actual newlines BEFORE splitting
+                json1Pretty = json1Pretty.replace(/\\\\n/g, '\\n');
+            }} catch(e) {{
+                json1Pretty = json1Raw; // Use raw if parsing fails
+            }}
             
-            // Compute diff
-            const diff = computeLineDiff(lines1, lines2);
+            try {{
+                const obj2 = JSON.parse(json2Raw);
+                json2Pretty = JSON.stringify(obj2, null, 2);
+                // Replace literal \\n with actual newlines BEFORE splitting
+                json2Pretty = json2Pretty.replace(/\\\\n/g, '\\n');
+            }} catch(e) {{
+                json2Pretty = json2Raw; // Use raw if parsing fails
+            }}
             
             // Show modal
             const modal = document.getElementById('sideBySideModal');
@@ -1895,11 +1974,19 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             leftHeader.textContent = cluster1;
             rightHeader.textContent = cluster2;
             
-            // Render left pane (cluster1)
-            leftPane.innerHTML = renderDiffPane(diff, 'left', lines1);
+            // NOW split into lines for comparison (after \\n expansion)
+            const lines1 = json1Pretty.split('\\n');
+            const lines2 = json2Pretty.split('\\n');
             
-            // Render right pane (cluster2)
-            rightPane.innerHTML = renderDiffPane(diff, 'right', lines2);
+            // Compute line-by-line diff
+            const diff = computeLineDiff(lines1, lines2);
+            
+            // Render both panes with diff highlighting
+            leftPane.innerHTML = renderDiffContent(diff, 'left');
+            rightPane.innerHTML = renderDiffContent(diff, 'right');
+            
+            // Apply current zoom level
+            applySideBySideZoom();
             
             // Sync scrolling between panes
             syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
@@ -1908,47 +1995,125 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         function computeLineDiff(lines1, lines2) {{
-            // Simple line-by-line comparison
-            // Returns array of diff operations
-            const diff = [];
-            const maxLines = Math.max(lines1.length, lines2.length);
+            // Use jsdiff library for robust diff computation
+            const text1 = lines1.join('\\n');
+            const text2 = lines2.join('\\n');
             
-            for (let i = 0; i < maxLines; i++) {{
-                const line1 = lines1[i] !== undefined ? lines1[i] : null;
-                const line2 = lines2[i] !== undefined ? lines2[i] : null;
+            // Get line-based diff using jsdiff
+            const changes = Diff.diffLines(text1, text2);
+            
+            // Convert jsdiff output to our format with smart merging
+            const diff = [];
+            let lineNum1 = 1;
+            let lineNum2 = 1;
+            
+            for (let i = 0; i < changes.length; i++) {{
+                const change = changes[i];
+                const nextChange = i + 1 < changes.length ? changes[i + 1] : null;
                 
-                if (line1 === null && line2 !== null) {{
-                    diff.push({{ type: 'added', line1: null, line2: line2, lineNum1: null, lineNum2: i + 1 }});
-                }} else if (line1 !== null && line2 === null) {{
-                    diff.push({{ type: 'removed', line1: line1, line2: null, lineNum1: i + 1, lineNum2: null }});
-                }} else if (line1 !== line2) {{
-                    diff.push({{ type: 'modified', line1: line1, line2: line2, lineNum1: i + 1, lineNum2: i + 1 }});
+                const lines = change.value.split('\\n');
+                if (lines[lines.length - 1] === '') {{
+                    lines.pop();
+                }}
+                
+                // Check if this is a removed block followed by an added block
+                if (change.removed && nextChange && nextChange.added) {{
+                    const removedLines = lines;
+                    const addedLines = nextChange.value.split('\\n');
+                    if (addedLines[addedLines.length - 1] === '') {{
+                        addedLines.pop();
+                    }}
+                    
+                    const maxLen = Math.max(removedLines.length, addedLines.length);
+                    
+                    for (let j = 0; j < maxLen; j++) {{
+                        const line1 = j < removedLines.length ? removedLines[j] : null;
+                        const line2 = j < addedLines.length ? addedLines[j] : null;
+                        
+                        if (line1 !== null && line2 !== null) {{
+                            // Both sides have content - modified
+                            diff.push({{
+                                type: 'modified',
+                                line1: line1,
+                                line2: line2,
+                                lineNum1: lineNum1++,
+                                lineNum2: lineNum2++
+                            }});
+                        }} else if (line1 !== null) {{
+                            // Only removed side
+                            diff.push({{
+                                type: 'removed',
+                                line1: line1,
+                                line2: null,
+                                lineNum1: lineNum1++,
+                                lineNum2: null
+                            }});
+                        }} else {{
+                            // Only added side
+                            diff.push({{
+                                type: 'added',
+                                line1: null,
+                                line2: line2,
+                                lineNum1: null,
+                                lineNum2: lineNum2++
+                            }});
+                        }}
+                    }}
+                    
+                    i++; // Skip next change since we processed it
+                }} else if (change.added) {{
+                    lines.forEach((line) => {{
+                        diff.push({{
+                            type: 'added',
+                            line1: null,
+                            line2: line,
+                            lineNum1: null,
+                            lineNum2: lineNum2++
+                        }});
+                    }});
+                }} else if (change.removed) {{
+                    lines.forEach((line) => {{
+                        diff.push({{
+                            type: 'removed',
+                            line1: line,
+                            line2: null,
+                            lineNum1: lineNum1++,
+                            lineNum2: null
+                        }});
+                    }});
                 }} else {{
-                    diff.push({{ type: 'unchanged', line1: line1, line2: line2, lineNum1: i + 1, lineNum2: i + 1 }});
+                    lines.forEach((line) => {{
+                        diff.push({{
+                            type: 'unchanged',
+                            line1: line,
+                            line2: line,
+                            lineNum1: lineNum1++,
+                            lineNum2: lineNum2++
+                        }});
+                    }});
                 }}
             }}
             
             return diff;
         }}
         
-        function renderDiffPane(diff, side, lines) {{
+        function renderDiffContent(diff, side) {{
             let html = '';
             
-            diff.forEach((item, index) => {{
+            diff.forEach((item) => {{
                 const lineNum = side === 'left' ? item.lineNum1 : item.lineNum2;
                 const lineContent = side === 'left' ? item.line1 : item.line2;
                 
                 let cssClass = '';
                 
                 if (lineContent === null) {{
-                    // Empty line placeholder for alignment
-                    html += `<div class="code-line" style="background: #2d2d2d;">
-                                <span class="code-line-number"></span>
-                                <span class="code-line-content">&nbsp;</span>
-                             </div>`;
-                    // Don't return, continue to next item
+                    // Empty placeholder for alignment
+                    html += '<div class="code-line" style="background: #2d2d2d; opacity: 0.3;">' +
+                                '<span class="code-line-number"></span>' +
+                                '<span class="code-line-content">&nbsp;</span>' +
+                             '</div>';
                 }} else {{
-                    // Determine CSS class based on diff type
+                    // Determine CSS class based on diff type and side
                     if (item.type === 'added' && side === 'right') {{
                         cssClass = 'added';
                     }} else if (item.type === 'removed' && side === 'left') {{
@@ -1957,18 +2122,18 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         cssClass = 'modified';
                     }}
                     
-                    // Escape HTML to prevent XSS
-                    const escapedLine = lineContent
+                    // Escape HTML
+                    const escaped = lineContent
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
                         .replace(/'/g, '&#039;');
                     
-                    html += `<div class="code-line ${{cssClass}}">
-                                <span class="code-line-number">${{lineNum || ''}}</span>
-                                <span class="code-line-content">${{escapedLine || '&nbsp;'}}</span>
-                             </div>`;
+                    html += '<div class="code-line ' + cssClass + '">' +
+                                '<span class="code-line-number">' + (lineNum || '') + '</span>' +
+                                '<span class="code-line-content">' + escaped + '</span>' +
+                             '</div>';
                 }}
             }});
             
@@ -2207,14 +2372,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     <!-- Side-by-Side Diff Modal -->
     <div id="sideBySideModal" class="modal">
         <div class="sidebyside-modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="sideBySideModalTitle">Side-by-Side Comparison</h2>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
-                    <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">⟲</button>
-                    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+            <div class="sidebyside-modal-header">
+                <h2 id="sideBySideModalTitle" style="margin: 0; font-size: 1.3em;"></h2>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomOutSideBySide()" title="Zoom Out">−</button>
+                        <button class="zoom-btn" onclick="resetZoomSideBySide()" title="Reset Zoom">100%</button>
+                        <button class="zoom-btn" onclick="zoomInSideBySide()" title="Zoom In">+</button>
+                    </div>
+                    <button class="close-btn" onclick="closeDiffModal()">✕ Close</button>
                 </div>
-                <span class="close" onclick="closeDiffModal()">&times;</span>
             </div>
             <div class="sidebyside-container">
                 <div class="sidebyside-pane">
