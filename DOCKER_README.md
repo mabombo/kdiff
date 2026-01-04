@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # kdiff - Kubernetes Cluster Comparison Tool
 
 ![Docker Image Size](https://img.shields.io/docker/image-size/mabombo/kdiff)

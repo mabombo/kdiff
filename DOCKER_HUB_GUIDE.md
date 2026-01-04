@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # Come Pubblicare kdiff su Docker Hub
 
 Questa guida spiega come pubblicare l'immagine Docker di kdiff su Docker Hub.

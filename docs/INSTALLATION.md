@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # Guida Installazione e Distribuzione kdiff
 
 ## Opzioni di Distribuzione

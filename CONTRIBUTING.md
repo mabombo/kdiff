@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # Contributing to kdiff
 
 Thank you for considering contributing to kdiff! This document outlines our development workflow and guidelines.

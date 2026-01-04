@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # kdiff — Intelligent Kubernetes Resource Comparison Between Two Clusters
 
 ## 📋 Overview
