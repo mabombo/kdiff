@@ -2377,10 +2377,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 <div style="display: flex; gap: 15px; align-items: center;">
                     <div class="zoom-controls">
                         <button class="zoom-btn" onclick="zoomOutSideBySide()" title="Zoom Out">−</button>
-                        <button class="zoom-btn" onclick="resetZoomSideBySide()" title="Reset Zoom">100%</button>
+                        <button class="zoom-btn" onclick="resetZoomSideBySide()" title="Reset Zoom">⟲</button>
                         <button class="zoom-btn" onclick="zoomInSideBySide()" title="Zoom In">+</button>
                     </div>
-                    <button class="close-btn" onclick="closeDiffModal()">✕ Close</button>
+                    <span class="close" onclick="closeDiffModal()">&times;</span>
                 </div>
             </div>
             <div class="sidebyside-container">
