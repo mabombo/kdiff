@@ -8,7 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Side-by-side diff visualization in HTML reports (VS Code style)
+  * New "Side-by-Side" button for each resource comparison
+  * Two-pane view with synchronized scrolling
+  * Line-by-line comparison with color highlighting
+  * Added/removed/modified lines clearly marked
+  * Dark theme matching VS Code interface
+  * Full JSON content comparison row-by-row
 
 ### Changed
 - Nothing yet

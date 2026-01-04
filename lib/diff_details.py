@@ -729,6 +729,35 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             diff_content_base64 = base64.b64encode(diff_content.encode('utf-8')).decode('ascii')
             
             # ----------------------------------------
+            # 2.3.1 Carica contenuti JSON per side-by-side diff
+            # ----------------------------------------
+            f1 = c1_dir / base
+            f2 = c2_dir / base
+            
+            json1_content = ""
+            json2_content = ""
+            
+            if f1.exists():
+                try:
+                    json1_content = f1.read_text(encoding='utf-8')
+                except:
+                    json1_content = "Error reading file"
+            else:
+                json1_content = "File not found"
+            
+            if f2.exists():
+                try:
+                    json2_content = f2.read_text(encoding='utf-8')
+                except:
+                    json2_content = "Error reading file"
+            else:
+                json2_content = "File not found"
+            
+            # Encode to base64 for HTML embedding
+            json1_base64 = base64.b64encode(json1_content.encode('utf-8')).decode('ascii')
+            json2_base64 = base64.b64encode(json2_content.encode('utf-8')).decode('ascii')
+            
+            # ----------------------------------------
             # 2.4 Genera HTML sezione risorsa (collapsabile)
             # ----------------------------------------
             resources_html.append(f'''
@@ -749,6 +778,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showDiffFromButton(this)">
                                 📄 View Diff
+                            </button>
+                            <button class="view-sidebyside-btn" 
+                                    data-json1="{json1_base64}"
+                                    data-json2="{json2_base64}"
+                                    data-filename="{html_lib.escape(base)}"
+                                    data-cluster1="{html_lib.escape(cluster1)}"
+                                    data-cluster2="{html_lib.escape(cluster2)}"
+                                    onclick="event.stopPropagation(); showSideBySideDiff(this)">
+                                ⚖️ Side-by-Side
                             </button>
                         </div>
                     </div>
@@ -1235,6 +1273,30 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             transform: translateY(0);
         }}
         
+        .view-sidebyside-btn {{
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        
+        .view-sidebyside-btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }}
+        
+        .view-sidebyside-btn:active {{
+            transform: translateY(0);
+        }}
+        
         .modal {{
             display: none;
             position: fixed;
@@ -1566,6 +1628,118 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             border-top: 1px solid #e5e7eb;
         }}
         
+        /* =====================================
+           SIDE-BY-SIDE DIFF MODAL STYLES
+           ===================================== */
+        .sidebyside-modal-content {{
+            background-color: #1e1e1e;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1800px;
+            height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }}
+        
+        .sidebyside-container {{
+            display: flex;
+            height: 100%;
+            overflow: hidden;
+        }}
+        
+        .sidebyside-pane {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #3d3d3d;
+            background: #1e1e1e;
+        }}
+        
+        .sidebyside-pane:last-child {{
+            border-right: none;
+        }}
+        
+        .sidebyside-pane-header {{
+            background: #2d2d2d;
+            color: #cccccc;
+            padding: 12px 20px;
+            font-weight: 600;
+            border-bottom: 1px solid #3d3d3d;
+            font-size: 0.9em;
+        }}
+        
+        .sidebyside-pane-header.cluster1 {{
+            background: #2d3748;
+            color: #90cdf4;
+        }}
+        
+        .sidebyside-pane-header.cluster2 {{
+            background: #2d3a2d;
+            color: #9ae6b4;
+        }}
+        
+        .sidebyside-pane-content {{
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            padding: 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            background: #1e1e1e;
+        }}
+        
+        .code-line {{
+            padding: 0 20px;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+        }}
+        
+        .code-line-number {{
+            display: inline-block;
+            width: 50px;
+            color: #858585;
+            text-align: right;
+            padding-right: 15px;
+            user-select: none;
+            flex-shrink: 0;
+        }}
+        
+        .code-line-content {{
+            color: #d4d4d4;
+            white-space: pre;
+            flex: 1;
+        }}
+        
+        .code-line.added {{
+            background: rgba(16, 185, 129, 0.15);
+        }}
+        
+        .code-line.added .code-line-content {{
+            background: rgba(16, 185, 129, 0.25);
+        }}
+        
+        .code-line.removed {{
+            background: rgba(239, 68, 68, 0.15);
+        }}
+        
+        .code-line.removed .code-line-content {{
+            background: rgba(239, 68, 68, 0.25);
+        }}
+        
+        .code-line.modified {{
+            background: rgba(59, 130, 246, 0.15);
+        }}
+        
+        .code-line.modified .code-line-content {{
+            background: rgba(59, 130, 246, 0.25);
+        }}
+        
         @media print {{
             body {{
                 background: white;
@@ -1682,13 +1856,155 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         // Close diff modal
         function closeDiffModal() {{
             const modal = document.getElementById('diffModal');
-            modal.style.display = 'none';
+            const sideBySideModal = document.getElementById('sideBySideModal');
+            if (modal) modal.style.display = 'none';
+            if (sideBySideModal) sideBySideModal.style.display = 'none';
+        }}
+        
+        // ========================================
+        // SIDE-BY-SIDE DIFF - VS Code Style Comparison
+        // ========================================
+        
+        function showSideBySideDiff(button) {{
+            const json1Base64 = button.getAttribute('data-json1');
+            const json2Base64 = button.getAttribute('data-json2');
+            const filename = button.getAttribute('data-filename');
+            const cluster1 = button.getAttribute('data-cluster1');
+            const cluster2 = button.getAttribute('data-cluster2');
+            
+            // Decode base64 JSON content
+            const json1 = atob(json1Base64);
+            const json2 = atob(json2Base64);
+            
+            // Split into lines
+            const lines1 = json1.split('\\n');
+            const lines2 = json2.split('\\n');
+            
+            // Compute diff
+            const diff = computeLineDiff(lines1, lines2);
+            
+            // Show modal
+            const modal = document.getElementById('sideBySideModal');
+            const modalTitle = document.getElementById('sideBySideModalTitle');
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            const leftHeader = document.getElementById('sideBySideLeftHeader');
+            const rightHeader = document.getElementById('sideBySideRightHeader');
+            
+            modalTitle.textContent = filename;
+            leftHeader.textContent = cluster1;
+            rightHeader.textContent = cluster2;
+            
+            // Render left pane (cluster1)
+            leftPane.innerHTML = renderDiffPane(diff, 'left', lines1);
+            
+            // Render right pane (cluster2)
+            rightPane.innerHTML = renderDiffPane(diff, 'right', lines2);
+            
+            // Sync scrolling between panes
+            syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
+            
+            modal.style.display = 'block';
+        }}
+        
+        function computeLineDiff(lines1, lines2) {{
+            // Simple line-by-line comparison
+            // Returns array of diff operations
+            const diff = [];
+            const maxLines = Math.max(lines1.length, lines2.length);
+            
+            for (let i = 0; i < maxLines; i++) {{
+                const line1 = lines1[i] !== undefined ? lines1[i] : null;
+                const line2 = lines2[i] !== undefined ? lines2[i] : null;
+                
+                if (line1 === null && line2 !== null) {{
+                    diff.push({{ type: 'added', line1: null, line2: line2, lineNum1: null, lineNum2: i + 1 }});
+                }} else if (line1 !== null && line2 === null) {{
+                    diff.push({{ type: 'removed', line1: line1, line2: null, lineNum1: i + 1, lineNum2: null }});
+                }} else if (line1 !== line2) {{
+                    diff.push({{ type: 'modified', line1: line1, line2: line2, lineNum1: i + 1, lineNum2: i + 1 }});
+                }} else {{
+                    diff.push({{ type: 'unchanged', line1: line1, line2: line2, lineNum1: i + 1, lineNum2: i + 1 }});
+                }}
+            }}
+            
+            return diff;
+        }}
+        
+        function renderDiffPane(diff, side, lines) {{
+            let html = '';
+            
+            diff.forEach((item, index) => {{
+                const lineNum = side === 'left' ? item.lineNum1 : item.lineNum2;
+                const lineContent = side === 'left' ? item.line1 : item.line2;
+                
+                let cssClass = '';
+                
+                if (lineContent === null) {{
+                    // Empty line placeholder
+                    html += `<div class="code-line" style="background: #2d2d2d;">
+                                <span class="code-line-number"></span>
+                                <span class="code-line-content">&nbsp;</span>
+                             </div>`;
+                    return;
+                }}
+                
+                if (item.type === 'added' && side === 'right') {{
+                    cssClass = 'added';
+                }} else if (item.type === 'removed' && side === 'left') {{
+                    cssClass = 'removed';
+                }} else if (item.type === 'modified') {{
+                    cssClass = 'modified';
+                }}
+                
+                const escapedLine = lineContent
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+                
+                html += `<div class="code-line ${{cssClass}}">
+                            <span class="code-line-number">${{lineNum || ''}}</span>
+                            <span class="code-line-content">${{escapedLine || '&nbsp;'}}</span>
+                         </div>`;
+            }});
+            
+            return html;
+        }}
+        
+        function syncPaneScrolling(leftPaneId, rightPaneId) {{
+            const leftPane = document.getElementById(leftPaneId);
+            const rightPane = document.getElementById(rightPaneId);
+            
+            let isLeftScrolling = false;
+            let isRightScrolling = false;
+            
+            leftPane.addEventListener('scroll', function() {{
+                if (!isRightScrolling) {{
+                    isLeftScrolling = true;
+                    rightPane.scrollTop = leftPane.scrollTop;
+                    setTimeout(() => {{ isLeftScrolling = false; }}, 10);
+                }}
+            }});
+            
+            rightPane.addEventListener('scroll', function() {{
+                if (!isLeftScrolling) {{
+                    isRightScrolling = true;
+                    leftPane.scrollTop = rightPane.scrollTop;
+                    setTimeout(() => {{ isRightScrolling = false; }}, 10);
+                }}
+            }});
         }}
         
         // Close modal by clicking outside content
         window.onclick = function(event) {{
             const modal = document.getElementById('diffModal');
+            const sideBySideModal = document.getElementById('sideBySideModal');
             if (event.target === modal) {{
+                closeDiffModal();
+            }}
+            if (event.target === sideBySideModal) {{
                 closeDiffModal();
             }}
         }}
@@ -1882,6 +2198,35 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             </div>
             <div class="modal-body" id="modalBody">
                 <!-- Diff content will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Side-by-Side Diff Modal -->
+    <div id="sideBySideModal" class="modal">
+        <div class="sidebyside-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="sideBySideModalTitle">Side-by-Side Comparison</h2>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+                    <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">⟲</button>
+                    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                </div>
+                <span class="close" onclick="closeDiffModal()">&times;</span>
+            </div>
+            <div class="sidebyside-container">
+                <div class="sidebyside-pane">
+                    <div class="sidebyside-pane-header cluster1" id="sideBySideLeftHeader">Cluster 1</div>
+                    <div class="sidebyside-pane-content" id="sideBySideLeftPane">
+                        <!-- Left pane content -->
+                    </div>
+                </div>
+                <div class="sidebyside-pane">
+                    <div class="sidebyside-pane-header cluster2" id="sideBySideRightHeader">Cluster 2</div>
+                    <div class="sidebyside-pane-content" id="sideBySideRightPane">
+                        <!-- Right pane content -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
