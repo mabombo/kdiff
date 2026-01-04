@@ -22,6 +22,18 @@
 - ✅ **Diff ConfigMap intelligente**: mostra solo le linee modificate nei file di configurazione, non l'intero blob
 - ✅ **Confronto env non-posizionale**: variabili d'ambiente confrontate per nome, non per posizione nell'array
 - ✅ **Report HTML interattivi**: interfaccia web con sezioni collassabili, zoom, e visualizzazione diff inline
+- ✅ **Visualizzatore side-by-side**: confronto a doppio pannello stile VS Code con scroll sincronizzato
+  * Clicca sul pulsante "⚖️ Side-by-Side" su qualsiasi risorsa con differenze
+  * Layout a due pannelli (split 50/50) con nomi cluster reali
+  * Confronto riga per riga con evidenziazione colori:
+    - 🔴 Sfondo rosso: righe presenti solo nel primo cluster (rimosse)
+    - 🟢 Sfondo verde: righe presenti solo nel secondo cluster (aggiunte)
+    - 🔵 Sfondo blu: righe modificate tra i cluster
+  * Alimentato da [jsdiff](https://github.com/kpdecker/jsdiff) per algoritmo diff robusto
+  * Controlli zoom (+, ⟲, -) per regolare dimensione font
+  * Scroll sincronizzato tra i pannelli
+  * Numeri di riga su entrambi i lati per riferimento facile
+- ✅ **Card risorse interattive**: Card "Resources Only in One Cluster" migliorata con icona occhio e effetti hover per migliore visibilità
 - ✅ **Riduzione rumore**: labels e annotations opzionali (default: rimossi per concentrarsi su modifiche sostanziali)
 - ✅ **Cleanup automatico**: mantiene solo ultime 3 esecuzioni per risparmiare spazio
 - ✅ **Filtri flessibili**: include/escludi specifiche risorse o tipi
@@ -412,5 +424,5 @@ MIT License - vedi [LICENSE](LICENSE)
 
 ---
 
-**Versione**: 1.0.0  
+**Versione**: 1.1.0  
 **Data ultimo aggiornamento**: Gennaio 2026

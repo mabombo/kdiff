@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+  <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
 </div>
 
 # kdiff - Kubernetes Cluster Comparison Tool
@@ -13,6 +13,8 @@ kdiff is a powerful command-line tool for comparing Kubernetes resources between
 
 - 🔍 **Intelligent Diff Detection** - Normalizes and compares Kubernetes resources
 - 📊 **Interactive HTML Reports** - Beautiful, interactive reports with color-coded diffs
+- ⚖️ **Side-by-Side Diff Viewer** - VS Code-style dual-pane comparison with synchronized scrolling
+- 👁️ **Enhanced UI Cards** - Interactive resource cards with improved hover effects
 - 🎯 **Resource Filtering** - Compare specific namespaces and resource types
 - 🚀 **Fast & Lightweight** - Alpine-based image (~182MB)
 - 🔒 **Secure** - Runs as non-root user
@@ -172,4 +174,4 @@ For issues, questions, or contributions, please visit:
 
 ## Version
 
-Current version: 1.0.0
+Current version: 1.1.0

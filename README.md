@@ -23,9 +23,18 @@
 - ✅ **Non-positional env comparison**: environment variables compared by name, not array position
 - ✅ **Interactive HTML reports**: web interface with collapsible sections, zoom, and inline diff visualization
 - ✅ **Side-by-side diff viewer**: VS Code-style dual-pane comparison with synchronized scrolling
-  * Line-by-line comparison with color highlighting (red/green/blue)
+  * Click "⚖️ Side-by-Side" button on any resource with differences
+  * Two-pane layout (50/50 split) with actual cluster names
+  * Line-by-line comparison with color highlighting:
+    - 🔴 Red background: lines only in first cluster (removed)
+    - 🟢 Green background: lines only in second cluster (added)
+    - 🔵 Blue background: lines modified between clusters
   * Powered by [jsdiff](https://github.com/kpdecker/jsdiff) for robust diff algorithm
-  * Zoom controls and proper alignment even with complex diffs
+  * Zoom controls (+, ⟲, -) for adjusting font size
+  * Synchronized scrolling between panes
+  * Line numbers on both sides for easy reference
+  * Proper handling of complex JSON structures and embedded newlines
+- ✅ **Interactive resource cards**: Enhanced "Resources Only in One Cluster" card with eye icon and improved hover effects for better visibility
 - ✅ **Noise reduction**: labels and annotations optional (default: removed to focus on substantial changes)
 - ✅ **Fixed output directory**: always uses `latest/` for easy refresh workflow
 - ✅ **Flexible filters**: include/exclude specific resources or types
@@ -225,11 +234,20 @@ The directory is automatically cleaned on each execution.
 The `diff-details.html` file provides:
 
 - **Dashboard with statistics**: total changes, resources by kind, missing resources
+- **Interactive resource cards**: Click on "Resources Only in One Cluster" card (with eye icon 👁️) to view detailed list
 - **Color-coded diff visualization**: green for additions, red for removals
-- **Modal popup for detailed diffs**: zoomable full-screen view
+- **Two viewing modes for diffs**:
+  * **View Diff**: Standard unified diff view with syntax highlighting and zoom
+  * **⚖️ Side-by-Side**: VS Code-style dual-pane comparison with:
+    - Perfect 50/50 split showing both cluster versions
+    - Synchronized scrolling between panes
+    - Color-coded line-by-line differences (red/green/blue)
+    - Independent zoom controls
+    - Line numbers on both sides
+- **Modal popups**: Full-screen zoomable views for detailed inspection
 - **Collapsible sections**: click to expand/collapse each resource
-- **Cluster name tooltips**: hover over diff lines to see which cluster (red=cluster1, green=cluster2)
-- **Direct links to resources**: quick navigation
+- **Cluster name tooltips**: hover over diff lines to see which cluster
+- **Direct links to resources**: quick navigation within report
 
 ### 📋 Console Output
 
@@ -439,5 +457,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Last updated**: January 2026
