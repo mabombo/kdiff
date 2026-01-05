@@ -908,6 +908,25 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             color: white;
             padding: 40px;
             text-align: center;
+            position: relative;
+        }}
+        
+        /* Logo kdiff */
+        .header-logo {{
+            display: inline-block;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }}
+        
+        .header-logo:hover {{
+            transform: scale(1.05);
+            opacity: 0.9;
+        }}
+        
+        .header-logo img {{
+            height: 80px;
+            width: auto;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
         }}
         
         .header h1 {{
@@ -2314,6 +2333,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
 <body>
     <div class="container">
         <div class="header">
+            <a href="https://github.com/mabombo/kdiff" target="_blank" class="header-logo" title="View kdiff on GitHub">
+                <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" />
+            </a>
             <h1>🔍 kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
