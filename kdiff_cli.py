@@ -50,6 +50,26 @@ def cleanup_output_dir(outdir: Path):
             print(f"Warning: Unable to clean {outdir}: {e}", file=sys.stderr)
 
 
+def open_html_in_browser(html_path: Path) -> bool:
+    """Try to open HTML file in the default browser.
+    Returns True if successful, False otherwise.
+    """
+    import platform
+    try:
+        system = platform.system()
+        if system == 'Darwin':  # macOS
+            subprocess.run(['open', str(html_path)], check=True)
+        elif system == 'Linux':
+            subprocess.run(['xdg-open', str(html_path)], check=True)
+        elif system == 'Windows':
+            subprocess.run(['start', str(html_path)], shell=True, check=True)
+        else:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 # dynamic import helper to load normalize.normalize
 def load_normalize_func():
     spec = importlib.util.spec_from_file_location('normalize', str(LIB / 'normalize.py'))
@@ -144,18 +164,89 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c1', required=True)
-    parser.add_argument('-c2', required=True)
-    parser.add_argument('-r')
-    parser.add_argument('-n')
-    parser.add_argument('-o')
-    parser.add_argument('-f', '--format', dest='format', default='text')
-    parser.add_argument('--include-volatile', action='store_true')
-    parser.add_argument('--include-services-ingress', action='store_true', help='Include service and ingress resources in comparison')
-    parser.add_argument('--include-resource-types', help=f'Comma-separated list of resource types to include in comparison (overrides defaults). Use "all" to include all supported types. Supported: {", ".join(ALL_SUPPORTED_RESOURCES)}')
-    parser.add_argument('--exclude-resources', help=f'Comma-separated list of resource types to exclude from comparison. Supported resources: {", ".join(ALL_SUPPORTED_RESOURCES)}')
-    parser.add_argument('--show-metadata', action='store_true', help='Keep metadata.labels and annotations in normalized output')
+    parser = argparse.ArgumentParser(
+        description='kdiff — Compare Kubernetes resources between two clusters',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  # Compare all default resources between two clusters
+  kdiff -c1 prod-cluster -c2 staging-cluster
+
+  # Compare only deployments and configmaps in a specific namespace
+  kdiff -c1 prod-cluster -c2 staging-cluster -r deployment,configmap -n my-namespace
+
+  # Compare all supported resource types (including volatile resources)
+  kdiff -c1 prod-cluster -c2 staging-cluster --include-resource-types all
+
+  # Compare with custom output directory
+  kdiff -c1 prod-cluster -c2 staging-cluster -o /tmp/my-diff-output
+
+  # Compare and generate only JSON output (skip console report)
+  kdiff -c1 prod-cluster -c2 staging-cluster -f json
+
+  # Compare including pods and replicasets (volatile resources)
+  kdiff -c1 prod-cluster -c2 staging-cluster --include-volatile
+
+  # Compare keeping metadata labels and annotations
+  kdiff -c1 prod-cluster -c2 staging-cluster --show-metadata
+
+  # Compare excluding secrets and configmaps
+  kdiff -c1 prod-cluster -c2 staging-cluster --exclude-resources secret,configmap
+
+Default resources compared:
+  deployment, statefulset, daemonset, configmap, secret, persistentvolumeclaim,
+  serviceaccount, role, rolebinding, horizontalpodautoscaler, cronjob, job
+        ''')
+    
+    parser.add_argument('-c1', 
+                       required=True, 
+                       metavar='CONTEXT1',
+                       help='First Kubernetes context name (e.g., prod-cluster). Use "kubectl config get-contexts" to see available contexts')
+    
+    parser.add_argument('-c2', 
+                       required=True,
+                       metavar='CONTEXT2', 
+                       help='Second Kubernetes context name to compare against (e.g., staging-cluster)')
+    
+    parser.add_argument('-r',
+                       metavar='RESOURCES',
+                       help='Comma-separated list of resource types to compare (e.g., deployment,configmap,secret). If not specified, compares default resources. See examples below for details')
+    
+    parser.add_argument('-n',
+                       metavar='NAMESPACE',
+                       help='Kubernetes namespace to filter resources. If not specified, compares resources across all namespaces (--all-namespaces)')
+    
+    parser.add_argument('-o',
+                       metavar='OUTPUT_DIR',
+                       help='Output directory for comparison results (default: ./kdiff_output/latest). Directory will be cleaned if it already exists')
+    
+    parser.add_argument('-f', '--format',
+                       dest='format',
+                       default='text',
+                       metavar='FORMAT',
+                       choices=['text', 'json'],
+                       help='Output format for console report: "text" (default, colorized console output) or "json" (only JSON files, no console report)')
+    
+    parser.add_argument('--include-volatile',
+                       action='store_true',
+                       help='Include volatile resources in comparison (pod, replicaset). By default these are excluded as they change frequently')
+    
+    parser.add_argument('--include-services-ingress', 
+                       action='store_true', 
+                       help='Include service and ingress resources in comparison')
+    
+    parser.add_argument('--include-resource-types',
+                       metavar='TYPES',
+                       help=f'Comma-separated list of resource types to include in comparison (overrides defaults). Use "all" to include all supported types. Supported: {", ".join(ALL_SUPPORTED_RESOURCES)}')
+    
+    parser.add_argument('--exclude-resources',
+                       metavar='TYPES',
+                       help=f'Comma-separated list of resource types to exclude from comparison. Supported resources: {", ".join(ALL_SUPPORTED_RESOURCES)}')
+    
+    parser.add_argument('--show-metadata',
+                       action='store_true',
+                       help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
+    
     args = parser.parse_args()
 
     resources = RESOURCES.copy()
@@ -226,10 +317,20 @@ def main():
 
     # Report HTML interattivo dettagliato - SEMPRE generato (anche con 0 differenze)
     subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
+    
+    # Path to the HTML report
+    html_report = outdir / 'diff-details.html'
 
     if rc == 0:
         print(f"\n{GREEN}✅ Clusters are equal for the verified resources.{RESET}")
-        print(f"📊 HTML Report: {outdir / 'diff-details.html'}")
+        print(f"📊 HTML Report: {html_report}")
+        
+        # Try to open HTML report in browser
+        if open_html_in_browser(html_report):
+            print(f"{GREEN}🌐 Opening report in browser...{RESET}")
+        else:
+            print(f"{YELLOW}💡 Open manually: {html_report.absolute()}{RESET}")
+        
         sys.exit(0)
     else:
         print(f"\n{YELLOW}⚠️ Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
@@ -241,6 +342,14 @@ def main():
         
         # Report Markdown/HTML semplici (commentati - usare diff-details invece)
         # subprocess.run(['python3', str(LIB / 'report_md.py'), str(json_out), str(diffs), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
+        
+        print(f"📊 HTML Report: {html_report}")
+        
+        # Try to open HTML report in browser
+        if open_html_in_browser(html_report):
+            print(f"{GREEN}🌐 Opening report in browser...{RESET}")
+        else:
+            print(f"{YELLOW}💡 Open manually: {html_report.absolute()}{RESET}")
         
         sys.exit(1)
 
