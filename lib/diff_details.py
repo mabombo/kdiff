@@ -787,7 +787,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                             </div>
                         </div>
                         <div class="resource-stats">
-                            <span class="stat-badge" title="Number of JSON fields/paths modified in this resource (not the number of diff lines)">
+                            <span class="info-icon" title="Number of JSON fields/paths modified in this resource (not the number of diff lines)">ⓘ</span>
+                            <span class="stat-badge">
                                 {len(changed)} changes
                             </span>
                             <button class="view-diff-btn" 
@@ -843,9 +844,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <div class="kind-stats" style="display: flex; gap: 10px; align-items: center;">
                         <span class="stat-badge">{total_changes} total changes</span>
                         <button onclick="event.stopPropagation(); toggleKindResources('{kind_id}')" 
-                                style="padding: 4px 10px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 600; white-space: nowrap;"
+                                style="padding: 3px 6px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75em; font-weight: 600; white-space: nowrap;"
                                 title="Expand/Collapse all resources in this group">
-                            ⇅ Toggle Resources
+                            +/−
                         </button>
                     </div>
                 </div>
@@ -912,6 +913,35 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             color: #1f2937;
             line-height: 1.6;
             padding: 20px;
+        }}
+        
+        /* Search input styling */
+        #resourceSearch {{
+            font-family: inherit;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }}
+        
+        #resourceSearch:focus {{
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+        }}
+        
+        #clearSearch {{
+            transition: all 0.2s ease;
+        }}
+        
+        #clearSearch:hover {{
+            background: #dc2626;
+            transform: scale(1.05);
+        }}
+        
+        /* Search highlight style */
+        .search-highlight {{
+            background: #ffeb3b;
+            color: #000;
+            font-weight: 600;
+            padding: 2px 4px;
+            border-radius: 3px;
         }}
         
         /* Container principale bianco con ombra */
@@ -1337,6 +1367,21 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             border-radius: 12px;
             font-size: 0.85em;
             font-weight: 600;
+        }}
+        
+        .info-icon {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 16px;
+            cursor: help;
+            transition: all 0.2s ease;
+        }}
+        
+        .info-icon:hover {{
+            color: #667eea;
+            transform: scale(1.2);
         }}
         
         .view-diff-btn {{
@@ -2361,6 +2406,120 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
+        // Store original state of kind groups
+        let originalKindGroupsState = null;
+        
+        // Filter resources by name in real-time
+        function filterResources(searchText) {{
+            const search = searchText.toLowerCase().trim();
+            const clearBtn = document.getElementById('clearSearch');
+            const searchInput = document.getElementById('resourceSearch');
+            
+            // Save original state on first filter
+            if (search && !originalKindGroupsState) {{
+                originalKindGroupsState = new Map();
+                document.querySelectorAll('.kind-body').forEach(body => {{
+                    originalKindGroupsState.set(body.id, body.classList.contains('collapsed'));
+                }});
+            }}
+            
+            // Show/hide clear button
+            if (search) {{
+                clearBtn.style.display = 'block';
+            }} else {{
+                clearBtn.style.display = 'none';
+            }}
+            
+            // Get all kind groups
+            const kindGroups = document.querySelectorAll('.kind-group');
+            
+            kindGroups.forEach(group => {{
+                const resourceSections = group.querySelectorAll('.resource-section');
+                const kindBody = group.querySelector('.kind-body');
+                const toggleIcon = group.querySelector('.toggle-icon');
+                let hasVisibleResources = false;
+                
+                resourceSections.forEach(section => {{
+                    const resourceName = section.querySelector('.resource-name');
+                    if (resourceName) {{
+                        // Get or store original text
+                        if (!resourceName.hasAttribute('data-original-text')) {{
+                            resourceName.setAttribute('data-original-text', resourceName.textContent);
+                        }}
+                        const originalText = resourceName.getAttribute('data-original-text');
+                        const name = originalText.toLowerCase();
+                        
+                        if (!search || name.includes(search)) {{
+                            section.style.display = 'block';
+                            hasVisibleResources = true;
+                            
+                            // Highlight matching text
+                            if (search) {{
+                                const index = name.indexOf(search);
+                                if (index !== -1) {{
+                                    const before = originalText.substring(0, index);
+                                    const match = originalText.substring(index, index + search.length);
+                                    const after = originalText.substring(index + search.length);
+                                    resourceName.innerHTML = before + '<mark class="search-highlight">' + match + '</mark>' + after;
+                                }} else {{
+                                    resourceName.textContent = originalText;
+                                }}
+                            }} else {{
+                                resourceName.textContent = originalText;
+                            }}
+                        }} else {{
+                            section.style.display = 'none';
+                            resourceName.textContent = originalText;
+                        }}
+                    }}
+                }});
+                
+                // Handle kind group visibility and expansion
+                if (search) {{
+                    if (hasVisibleResources) {{
+                        group.style.display = 'block';
+                        // Expand kind group to show matching resources
+                        if (kindBody) {{
+                            kindBody.classList.remove('collapsed');
+                        }}
+                        if (toggleIcon) {{
+                            toggleIcon.classList.remove('collapsed');
+                            toggleIcon.textContent = '▼';
+                        }}
+                    }} else {{
+                        group.style.display = 'none';
+                    }}
+                }} else {{
+                    // Restore to initial collapsed state when search is cleared
+                    group.style.display = 'block';
+                    if (kindBody) {{
+                        kindBody.classList.add('collapsed');
+                        if (toggleIcon) {{
+                            toggleIcon.classList.add('collapsed');
+                            toggleIcon.textContent = '▶';
+                        }}
+                    }}
+                    // Clear saved state
+                    originalKindGroupsState = null;
+                }}
+            }});
+            
+            // Update search input border color
+            if (search) {{
+                searchInput.style.borderColor = '#667eea';
+            }} else {{
+                searchInput.style.borderColor = '#e5e7eb';
+            }}
+        }}
+        
+        // Clear filter
+        function clearFilter() {{
+            const searchInput = document.getElementById('resourceSearch');
+            searchInput.value = '';
+            filterResources('');
+            searchInput.focus();
+        }}
+        
         // Espandi/Collassa tutte le risorse di un gruppo specifico
         function toggleKindResources(kindId) {{
             const kindBody = document.getElementById('kind-body-' + kindId);
@@ -2459,37 +2618,19 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         
         <div class="content">
             <div class="section">
-                <h2 class="section-title">Legend</h2>
-                <div class="legend">
-                    <div class="legend-item">
-                        <span class="badge badge-change">🔄</span>
-                        <div class="legend-text">
-                            <div class="legend-title">Changed</div>
-                            <div class="legend-description">Value modified between clusters</div>
-                        </div>
-                    </div>
-                    <div class="legend-item">
-                        <span class="badge badge-add">➕</span>
-                        <div class="legend-text">
-                            <div class="legend-title">Added</div>
-                            <div class="legend-description">Present in {cluster2}, not in {cluster1}</div>
-                        </div>
-                    </div>
-                    <div class="legend-item">
-                        <span class="badge badge-remove">➖</span>
-                        <div class="legend-text">
-                            <div class="legend-title">Removed</div>
-                            <div class="legend-description">Present in {cluster1}, not in {cluster2}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px;">
                     <h2 class="section-title" style="margin-bottom: 0;">Resource Details</h2>
-                    <button onclick="toggleAll()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        ⇅ Toggle All
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; max-width: 500px;">
+                        <span class="info-icon" title="Search filters resources by name only, not by resource content">ⓘ</span>
+                        <input type="text" 
+                               id="resourceSearch" 
+                               placeholder="🔍 Filter resources by name..." 
+                               oninput="filterResources(this.value)"
+                               style="flex: 1; padding: 10px 14px; border: 2.5px solid #9ca3af; border-radius: 8px; font-size: 15px; font-weight: 500; outline: none; transition: all 0.2s;">
+                        <button id="clearSearch" onclick="clearFilter()" style="padding: 10px 14px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none;">✕ Clear</button>
+                    </div>
+                    <button onclick="toggleAll()" style="padding: 3px 8px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75em; font-weight: 600; white-space: nowrap;" title="Expand/Collapse all groups and resources">
+                        +/− All
                     </button>
                 </div>
                 {''.join(kind_groups_html)}
