@@ -765,7 +765,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <div class="resource-header" style="border-left: 4px solid {color};">
                         <div style="flex: 1; cursor: pointer;" onclick="toggleResource('{base.replace('.', '-')}')">
                             <div class="resource-title">
-                                <span class="toggle-icon-small collapsed" id="toggle-res-{base.replace('.', '-')}">▶</span>
+                                <span class="toggle-icon-small" id="toggle-res-{base.replace('.', '-')}">▼</span>
                                 <span class="resource-name">{name}</span>
                             </div>
                         </div>
@@ -790,7 +790,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                             </button>
                         </div>
                     </div>
-                    <div class="resource-body collapsed" id="res-body-{base.replace('.', '-')}">
+                    <div class="resource-body" id="res-body-{base.replace('.', '-')}">
                         <table class="diff-table">
                             <thead>
                                 <tr>
@@ -815,14 +815,19 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         kind_id = kind.lower().replace(' ', '-')
         kind_groups_html.append(f'''
             <div class="kind-group" data-kind="{kind_id}">
-                <div class="kind-header" onclick="toggleKind('{kind_id}')" style="border-left: 4px solid {color};">
-                    <div class="kind-title">
+                <div class="kind-header" style="border-left: 4px solid {color};">
+                    <div class="kind-title" onclick="toggleKind('{kind_id}')" style="cursor: pointer; flex: 1;">
                         <span class="toggle-icon collapsed" id="toggle-{kind_id}">▶</span>
                         <span class="kind-badge" style="background: {color};">{kind}</span>
                         <span class="kind-count">{len(resources)} resource{'s' if len(resources) > 1 else ''}</span>
                     </div>
-                    <div class="kind-stats">
+                    <div class="kind-stats" style="display: flex; gap: 10px; align-items: center;">
                         <span class="stat-badge">{total_changes} total changes</span>
+                        <button onclick="event.stopPropagation(); toggleKindResources('{kind_id}')" 
+                                style="padding: 4px 10px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 600; white-space: nowrap;"
+                                title="Expand/Collapse all resources in this group">
+                            ⇅ Toggle Resources
+                        </button>
                     </div>
                 </div>
                 <div class="kind-body collapsed" id="kind-body-{kind_id}">
@@ -2283,40 +2288,101 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
-        // Expand all sections (Kind + Risorse)
-        function expandAll() {{
+        // Toggle intelligente di tutte le sezioni (Kind + Risorse)
+        function toggleAll() {{
+            // Determina lo stato: se almeno un gruppo o una risorsa è collapsed, espandi tutto
+            let hasCollapsed = false;
+            
             document.querySelectorAll('.kind-body').forEach(body => {{
-                body.classList.remove('collapsed');
+                if (body.classList.contains('collapsed')) {{
+                    hasCollapsed = true;
+                }}
             }});
-            document.querySelectorAll('.toggle-icon').forEach(icon => {{
-                icon.classList.remove('collapsed');
-                icon.textContent = '▼';
-            }});
-            document.querySelectorAll('.resource-body').forEach(body => {{
-                body.classList.remove('collapsed');
-            }});
-            document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
-                icon.classList.remove('collapsed');
-                icon.textContent = '▼';
-            }});
+            
+            if (!hasCollapsed) {{
+                document.querySelectorAll('.resource-body').forEach(body => {{
+                    if (body.classList.contains('collapsed')) {{
+                        hasCollapsed = true;
+                    }}
+                }});
+            }}
+            
+            if (hasCollapsed) {{
+                // Espandi tutto
+                document.querySelectorAll('.kind-body').forEach(body => {{
+                    body.classList.remove('collapsed');
+                }});
+                document.querySelectorAll('.toggle-icon').forEach(icon => {{
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                }});
+                document.querySelectorAll('.resource-body').forEach(body => {{
+                    body.classList.remove('collapsed');
+                }});
+                document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                }});
+            }} else {{
+                // Collassa tutto
+                document.querySelectorAll('.kind-body').forEach(body => {{
+                    body.classList.add('collapsed');
+                }});
+                document.querySelectorAll('.toggle-icon').forEach(icon => {{
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                }});
+                document.querySelectorAll('.resource-body').forEach(body => {{
+                    body.classList.add('collapsed');
+                }});
+                document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                }});
+            }}
         }}
         
-        // Collassa tutte le sezioni
-        function collapseAll() {{
-            document.querySelectorAll('.kind-body').forEach(body => {{
-                body.classList.add('collapsed');
+        // Espandi/Collassa tutte le risorse di un gruppo specifico
+        function toggleKindResources(kindId) {{
+            const kindBody = document.getElementById('kind-body-' + kindId);
+            if (!kindBody) return;
+            
+            // Se il gruppo è collapsed, espandilo prima
+            if (kindBody.classList.contains('collapsed')) {{
+                toggleKind(kindId);
+            }}
+            
+            // Ottieni tutte le risorse all'interno di questo gruppo
+            const resourceBodies = kindBody.querySelectorAll('.resource-body');
+            const resourceIcons = kindBody.querySelectorAll('.toggle-icon-small');
+            
+            // Determina lo stato: se almeno una risorsa è collapsed, espandi tutte, altrimenti collassa tutte
+            let hasCollapsed = false;
+            resourceBodies.forEach(body => {{
+                if (body.classList.contains('collapsed')) {{
+                    hasCollapsed = true;
+                }}
             }});
-            document.querySelectorAll('.toggle-icon').forEach(icon => {{
-                icon.classList.add('collapsed');
-                icon.textContent = '▶';
-            }});
-            document.querySelectorAll('.resource-body').forEach(body => {{
-                body.classList.add('collapsed');
-            }});
-            document.querySelectorAll('.toggle-icon-small').forEach(icon => {{
-                icon.classList.add('collapsed');
-                icon.textContent = '▶';
-            }});
+            
+            if (hasCollapsed) {{
+                // Espandi tutte le risorse del gruppo
+                resourceBodies.forEach(body => {{
+                    body.classList.remove('collapsed');
+                }});
+                resourceIcons.forEach(icon => {{
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                }});
+            }} else {{
+                // Collassa tutte le risorse del gruppo
+                resourceBodies.forEach(body => {{
+                    body.classList.add('collapsed');
+                }});
+                resourceIcons.forEach(icon => {{
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                }});
+            }}
         }}
         
         // ========================================
@@ -2402,11 +2468,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             <div class="section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 class="section-title" style="margin-bottom: 0;">Resource Details (Grouped by Type)</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="expandAll()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Expand All</button>
-                        <button onclick="collapseAll()" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Collapse All</button>
-                    </div>
+                    <h2 class="section-title" style="margin-bottom: 0;">Resource Details</h2>
+                    <button onclick="toggleAll()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        ⇅ Toggle All
+                    </button>
                 </div>
                 {''.join(kind_groups_html)}
             </div>
@@ -2429,6 +2494,23 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 </div>
                 <span class="close" onclick="closeDiffModal()">&times;</span>
             </div>
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;">
+                <span style="font-weight: 600; color: #64748b;">Legend:</span>
+                <div style="display: flex; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #dcfce7; border: 1px solid #86efac; border-radius: 3px;"></div>
+                        <span style="color: #059669;">Added</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 3px;"></div>
+                        <span style="color: #dc2626;">Removed</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
+                        <span style="color: #475569;">Unchanged</span>
+                    </div>
+                </div>
+            </div>
             <div class="modal-body" id="modalBody">
                 <!-- Diff content will be inserted here -->
             </div>
@@ -2447,6 +2529,27 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <button class="zoom-btn" onclick="zoomInSideBySide()" title="Zoom In">+</button>
                     </div>
                     <span class="close" onclick="closeDiffModal()">&times;</span>
+                </div>
+            </div>
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;">
+                <span style="font-weight: 600; color: #64748b;">Legend:</span>
+                <div style="display: flex; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #dcfce7; border: 1px solid #86efac; border-radius: 3px;"></div>
+                        <span style="color: #059669;">Added</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 3px;"></div>
+                        <span style="color: #dc2626;">Removed</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 3px;"></div>
+                        <span style="color: #3b82f6;">Modified</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
+                        <span style="color: #475569;">Unchanged</span>
+                    </div>
                 </div>
             </div>
             <div class="sidebyside-container">
