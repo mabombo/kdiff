@@ -1,3 +1,27 @@
+# kdiff v1.1.1 - Docker Experience Improvements
+
+## 🐳 Docker Enhancements
+
+### Smart Browser Detection
+- **Automatic Docker environment detection**: Prevents browser open failures in containers
+- **Graceful fallback**: Shows helpful manual open instructions instead of errors
+- Improved user experience when running kdiff in Docker
+
+### OS-Specific Open Commands
+- **Platform-aware suggestions**: Shows the right command for your operating system
+  - macOS: `open <file>`
+  - Linux: `xdg-open <file>`
+  - Windows: `start <file>`
+- **Relative paths**: Uses relative paths for easy copy-paste from any directory
+- **User-friendly messages**: Clear instructions when browser auto-open is not available
+
+## 🔧 Technical Improvements
+- Added `is_running_in_docker()` detection function
+- Checks for `/.dockerenv` file and Docker cgroup
+- Prevents unnecessary error messages in containerized environments
+
+---
+
 # kdiff v1.1.0 - Enhanced User Experience & Reporting
 
 ## 🎉 New Features
