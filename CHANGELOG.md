@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-01-06
+
+### Added
+- **Smart Docker environment detection** to prevent browser open failures
+  * Automatic detection via `/.dockerenv` file and Docker cgroups
+  * `is_running_in_docker()` function for reliable container detection
+- **OS-specific manual open suggestions** when browser auto-open fails
+  * macOS: `open <file>`
+  * Linux: `xdg-open <file>`
+  * Windows: `start <file>`
+  * Uses relative paths for easy copy-paste
+
+### Improved
+- **Better Docker user experience**: No more error messages when running in containers
+- **Clearer instructions**: Shows the exact command to run based on detected OS
+
+### Fixed
+- Browser auto-open errors in Docker containerized environments
+- Missing `os` module import for Docker detection
+
 ## [1.1.0] - 2026-01-04
 
 ### Added
