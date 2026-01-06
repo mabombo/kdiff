@@ -1,3 +1,41 @@
+# kdiff v1.2.0 - Enhanced Search & UI Improvements
+
+## 🔍 New Features
+
+### Real-time Resource Search
+- **Live filtering**: Search resources by name with instant results while typing
+- **Visual feedback**: Matching text highlighted in bright yellow
+- **Auto-expand**: Groups automatically expand when matches are found
+- **Smart reset**: Clear button restores initial collapsed state
+- **Info icon**: Added tooltip explaining search filters by name only
+
+### UI/UX Enhancements
+- **Info icons**: Added ⓘ icons with tooltips for better user guidance
+  - Next to "changes" badge: explains count represents JSON fields modified
+  - Next to search box: clarifies search works on resource names only
+- **Improved search box visibility**: Enhanced borders, shadows, and sizing
+- **Compact action buttons**: Redesigned +/− buttons with consistent sizing
+- **Removed Legend section**: Cleaner interface by removing redundant legend cards
+
+### Button Improvements
+- **Unified toggle buttons**: Changed from "⇅ Toggle" to "+/−" symbols
+- **Consistent sizing**: All collapse/expand buttons now proportionally sized
+- **Group controls**: Small "+/−" buttons for individual resource groups
+- **Global control**: "+/− All" button for expanding/collapsing everything
+
+## 🎨 Design Updates
+- Enhanced search input with gray border (#9ca3af) and subtle shadow
+- Info icons with hover effect (black → blue transition with scale)
+- Yellow highlight (#ffeb3b) for search matches
+- Improved button hierarchy and visual consistency
+
+## 🐛 Bug Fixes
+- Fixed search state restoration when clearing filters
+- Improved keyboard interaction with search field
+- Better tooltip positioning and visibility
+
+---
+
 # kdiff v1.1.1 - Docker Experience Improvements
 
 ## 🐳 Docker Enhancements
