@@ -351,7 +351,22 @@ Default resources compared:
         if open_html_in_browser(html_report):
             print(f"{GREEN}🌐 Opening report in browser...{RESET}")
         else:
-            print(f"{YELLOW}💡 Open manually: {html_report.absolute()}{RESET}")
+            # Show OS-specific command to open the file
+            import platform
+            system = platform.system()
+            
+            # Use the path as-is (it's already relative to output dir)
+            file_path = html_report
+            
+            if system == 'Darwin':  # macOS
+                cmd = f"open {file_path}"
+            elif system == 'Linux':
+                cmd = f"xdg-open {file_path}"
+            elif system == 'Windows':
+                cmd = f"start {file_path}"
+            else:
+                cmd = f"<browser> {file_path}"
+            print(f"{YELLOW}💡 Open manually: {cmd}{RESET}")
         
         sys.exit(0)
     else:
@@ -371,7 +386,22 @@ Default resources compared:
         if open_html_in_browser(html_report):
             print(f"{GREEN}🌐 Opening report in browser...{RESET}")
         else:
-            print(f"{YELLOW}💡 Open manually: {html_report.absolute()}{RESET}")
+            # Show OS-specific command to open the file
+            import platform
+            system = platform.system()
+            
+            # Use the path as-is (it's already relative to output dir)
+            file_path = html_report
+            
+            if system == 'Darwin':  # macOS
+                cmd = f"open {file_path}"
+            elif system == 'Linux':
+                cmd = f"xdg-open {file_path}"
+            elif system == 'Windows':
+                cmd = f"start {file_path}"
+            else:
+                cmd = f"<browser> {file_path}"
+            print(f"{YELLOW}💡 Open manually: {cmd}{RESET}")
         
         sys.exit(1)
 
