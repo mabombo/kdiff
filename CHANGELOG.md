@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-07
+
+### Added
+- **Real-time Resource Search** in HTML reports
+  * Live search filter to instantly find resources by name
+  * Yellow highlighting (`#ffeb3b`) on matched text
+  * Automatic expansion of groups containing matches
+  * Smart state restoration when clearing search
+  * Data preservation using `data-original-text` attribute
+- **Info icons (ⓘ)** with helpful tooltips
+  * Next to "changes" badge explaining counter meaning
+  * Next to search box clarifying "filters by name only"
+  * Interactive hover effects (blue color, scale animation)
+
+### Changed
+- **Enhanced search box visibility**
+  * Increased font size to 15px
+  * Added 2.5px gray border
+  * Added subtle shadow effects for prominence
+- **Compact button design**
+  * Reduced button size by 50% (0.75em font-size, 3px/6px padding)
+  * Unified all toggle buttons to use +/− symbols
+  * Changed "⇅ Toggle Resources" → "+/−"
+  * Changed "⇅ Toggle All" → "+/− All"
+  * Consistent styling across all action buttons
+
+### Removed
+- **Legend section** from HTML reports
+  * Removed redundant cards (Changed, Added, Removed)
+  * Kept legends only in detail view modals where they provide context
+
 ## [1.1.1] - 2026-01-06
 
 ### Added
