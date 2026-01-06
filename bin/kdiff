@@ -6,6 +6,7 @@ Usage: bin/kdiff -c1 CONTEXT1 -c2 CONTEXT2 [options]
 from __future__ import annotations
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -50,10 +51,31 @@ def cleanup_output_dir(outdir: Path):
             print(f"Warning: Unable to clean {outdir}: {e}", file=sys.stderr)
 
 
+def is_running_in_docker() -> bool:
+    """Detect if the script is running inside a Docker container."""
+    # Check for .dockerenv file (most reliable)
+    if os.path.exists('/.dockerenv'):
+        return True
+    
+    # Check cgroup for docker
+    try:
+        with open('/proc/1/cgroup', 'rt') as f:
+            return 'docker' in f.read()
+    except Exception:
+        pass
+    
+    return False
+
+
 def open_html_in_browser(html_path: Path) -> bool:
     """Try to open HTML file in the default browser.
     Returns True if successful, False otherwise.
+    Skips opening if running in Docker container.
     """
+    # Skip browser opening in Docker environment
+    if is_running_in_docker():
+        return False
+    
     import platform
     try:
         system = platform.system()
