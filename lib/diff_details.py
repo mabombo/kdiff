@@ -253,7 +253,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
     if not missing_in_c2 and not missing_in_c1:
         return '<p style="color: #6b7280; font-style: italic;">No resources found exclusively in one cluster.</p>'
     
-    rows = []
+    # Lista per raccogliere tutte le risorse con i loro metadati per l'ordinamento
+    all_resources = []
     
     # ========================================
     # Risorse presenti SOLO in cluster1
@@ -269,15 +270,14 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
                 namespace = obj.get('metadata', {}).get('namespace', '-')
                 color = get_kind_color(kind)
                 
-                # Genera riga tabella HTML
-                rows.append(f'''
-                    <tr>
-                        <td><span class="kind-badge" style="background: {color};">{kind}</span></td>
-                        <td><strong>{name}</strong></td>
-                        <td>{namespace}</td>
-                        <td><span class="missing-badge missing-in-c2">Only in {cluster1}</span></td>
-                    </tr>
-                ''')
+                all_resources.append({
+                    'kind': kind,
+                    'name': name,
+                    'namespace': namespace,
+                    'color': color,
+                    'location': f'Only in {cluster1}',
+                    'location_class': 'missing-in-c2'
+                })
         except:
             # Ignora errori (file corrotto, JSON invalido, etc)
             pass
@@ -295,20 +295,37 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
                 namespace = obj.get('metadata', {}).get('namespace', '-')
                 color = get_kind_color(kind)
                 
-                rows.append(f'''
-                    <tr>
-                        <td><span class="kind-badge" style="background: {color};">{kind}</span></td>
-                        <td><strong>{name}</strong></td>
-                        <td>{namespace}</td>
-                        <td><span class="missing-badge missing-in-c1">Only in {cluster2}</span></td>
-                    </tr>
-                ''')
+                all_resources.append({
+                    'kind': kind,
+                    'name': name,
+                    'namespace': namespace,
+                    'color': color,
+                    'location': f'Only in {cluster2}',
+                    'location_class': 'missing-in-c1'
+                })
         except:
             pass
     
-    # Caso 2: errori lettura file (nessuna riga generata)
-    if not rows:
+    # Caso 2: errori lettura file (nessuna risorsa generata)
+    if not all_resources:
         return '<p style="color: #6b7280; font-style: italic;">Unable to read resource details.</p>'
+    
+    # ========================================
+    # ORDINAMENTO: per tipo (kind) alfabetico crescente (A->Z)
+    # ========================================
+    all_resources.sort(key=lambda x: x['kind'])
+    
+    # Genera le righe HTML dalle risorse ordinate
+    rows = []
+    for res in all_resources:
+        rows.append(f'''
+            <tr>
+                <td><span class="kind-badge" style="background: {res['color']};">{res['kind']}</span></td>
+                <td><strong>{res['name']}</strong></td>
+                <td>{res['namespace']}</td>
+                <td><span class="missing-badge {res['location_class']}">{res['location']}</span></td>
+            </tr>
+        ''')
     
     # Caso 3: genera tabella HTML completa
     return f'''
@@ -770,7 +787,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                             </div>
                         </div>
                         <div class="resource-stats">
-                            <span class="stat-badge">{len(changed)} changes</span>
+                            <span class="stat-badge" title="Number of JSON fields/paths modified in this resource (not the number of diff lines)">
+                                {len(changed)} changes
+                            </span>
                             <button class="view-diff-btn" 
                                     data-diff-content="{diff_content_base64}"
                                     data-filename="{html_lib.escape(base)}"
