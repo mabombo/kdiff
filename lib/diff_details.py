@@ -1913,6 +1913,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             background: rgba(59, 130, 246, 0.25);
         }}
         
+        /* Inline diff highlighting within modified lines */
+        .inline-diff-highlight {{
+            background: rgba(251, 191, 36, 0.5);
+            border-radius: 2px;
+            padding: 1px 0;
+            font-weight: 600;
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
+        }}
+        
         @media print {{
             body {{
                 background: white;
@@ -2253,19 +2262,63 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         cssClass = 'modified';
                     }}
                     
-                    // Escape HTML
-                    const escaped = lineContent
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#039;');
+                    let contentHtml;
+                    
+                    // For modified lines, highlight the specific differences
+                    if (item.type === 'modified' && item.line1 && item.line2) {{
+                        contentHtml = highlightInlineDiff(item.line1, item.line2, side);
+                    }} else {{
+                        // Escape HTML for non-modified lines
+                        contentHtml = lineContent
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#039;');
+                    }}
                     
                     html += '<div class="code-line ' + cssClass + '">' +
                                 '<span class="code-line-number">' + (lineNum || '') + '</span>' +
-                                '<span class="code-line-content">' + escaped + '</span>' +
+                                '<span class="code-line-content">' + contentHtml + '</span>' +
                              '</div>';
                 }}
+            }});
+            
+            return html;
+        }}
+        
+        function highlightInlineDiff(line1, line2, side) {{
+            const lineToShow = side === 'left' ? line1 : line2;
+            const otherLine = side === 'left' ? line2 : line1;
+            
+            // Use character-level diff to find exact differences
+            const charDiff = Diff.diffChars(line1, line2);
+            
+            let html = '';
+            let currentIndex = 0;
+            
+            charDiff.forEach((part) => {{
+                const value = part.value;
+                
+                // Escape HTML
+                const escaped = value
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+                
+                if (side === 'left' && part.removed) {{
+                    // Highlight removed parts on left side
+                    html += '<mark class="inline-diff-highlight">' + escaped + '</mark>';
+                }} else if (side === 'right' && part.added) {{
+                    // Highlight added parts on right side
+                    html += '<mark class="inline-diff-highlight">' + escaped + '</mark>';
+                }} else if (!part.added && !part.removed) {{
+                    // Unchanged parts - no highlight
+                    html += escaped;
+                }}
+                // Skip parts that don't belong to this side (added on left, removed on right)
             }});
             
             return html;
