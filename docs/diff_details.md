@@ -20,7 +20,7 @@ Notes
 
 - The tool flattens only scalar JSON values (strings, numbers, booleans) and reports path-level differences (e.g., `data.k1`, `spec.replicas`, `metadata.annotations.foo`).
 - Implemented in Python to avoid Bash portability issues and to make aggregation, reporting and testing simpler.
-- Requires Python 3.8+ (stdlib only).
+- Requires Python 3.10+ (stdlib only).
 
 Example
 

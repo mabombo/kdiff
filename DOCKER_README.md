@@ -1,23 +1,16 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
-</div>
+# kdiff - Docker Guide
 
-# kdiff - Kubernetes Cluster Comparison Tool
-
-![Docker Image Size](https://img.shields.io/docker/image-size/mabombo/kdiff)
-![Docker Pulls](https://img.shields.io/docker/pulls/mabombo/kdiff)
-
-kdiff is a powerful command-line tool for comparing Kubernetes resources between two clusters or contexts. It generates detailed HTML reports showing differences in deployments, configmaps, secrets, and other resources.
+Compare Kubernetes resources between clusters using Docker.
 
 ## Features
 
-- 🔍 **Intelligent Diff Detection** - Normalizes and compares Kubernetes resources
-- 📊 **Interactive HTML Reports** - Beautiful, interactive reports with color-coded diffs
-- ⚖️ **Side-by-Side Diff Viewer** - VS Code-style dual-pane comparison with synchronized scrolling
-- 👁️ **Enhanced UI Cards** - Interactive resource cards with improved hover effects
-- 🎯 **Resource Filtering** - Compare specific namespaces and resource types
-- 🚀 **Fast & Lightweight** - Alpine-based image (~182MB)
-- 🔒 **Secure** - Runs as non-root user
+- Intelligent diff detection - normalizes and compares Kubernetes resources
+- Interactive HTML reports - detailed reports with color-coded diffs
+- Side-by-side diff viewer - dual-pane comparison with synchronized scrolling
+- Enhanced UI cards - interactive resource cards with improved hover effects
+- Resource filtering - compare specific namespaces and resource types
+- Fast and lightweight - Alpine-based image (~182MB)
+- Secure - runs as non-root user
 
 ## Quick Start
 

@@ -797,7 +797,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-cluster1="{html_lib.escape(cluster1)}"
                                     data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showDiffFromButton(this)">
-                                📄 View Diff
+                                View Diff
                             </button>
                             <button class="view-sidebyside-btn" 
                                     data-json1="{json1_base64}"
@@ -806,7 +806,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-cluster1="{html_lib.escape(cluster1)}"
                                     data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showSideBySideDiff(this)">
-                                ⚖️ Side-by-Side
+                                Side-by-Side
                             </button>
                         </div>
                     </div>
@@ -1913,6 +1913,38 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             background: rgba(59, 130, 246, 0.25);
         }}
         
+        /* Inline diff highlighting within modified lines */
+        .inline-diff-highlight {{
+            background: rgba(251, 191, 36, 0.5);
+            border-radius: 2px;
+            padding: 1px 0;
+            font-weight: 600;
+            box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
+        }}
+        
+        /* Filter box hover effect */
+        .filter-box {{
+            transition: all 0.2s ease;
+        }}
+        
+        #filterLabelAdded:hover .filter-box,
+        #filterLabelRemoved:hover .filter-box,
+        #filterLabelModified:hover .filter-box,
+        #filterLabelUnchanged:hover .filter-box {{
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }}
+        
+        /* Disabled filter labels */
+        [id^="filterLabel"][style*="opacity: 0.3"] {{
+            pointer-events: none;
+        }}
+        
+        [id^="filterLabel"][style*="opacity: 0.3"]:hover .filter-box {{
+            transform: none;
+            box-shadow: none;
+        }}
+        
         @media print {{
             body {{
                 background: white;
@@ -2116,6 +2148,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             leftPane.innerHTML = renderDiffContent(diff, 'left');
             rightPane.innerHTML = renderDiffContent(diff, 'right');
             
+            // Detect which line types are present in the diff
+            detectAndDisableFilters(diff);
+            
             // Apply current zoom level
             applySideBySideZoom();
             
@@ -2123,6 +2158,49 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
             
             modal.style.display = 'block';
+        }}
+        
+        function detectAndDisableFilters(diff) {{
+            // Count each type of line
+            const hasAdded = diff.some(item => item.type === 'added');
+            const hasRemoved = diff.some(item => item.type === 'removed');
+            const hasModified = diff.some(item => item.type === 'modified');
+            const hasUnchanged = diff.some(item => item.type === 'unchanged');
+            
+            // Enable/disable filters based on presence
+            updateFilterAvailability('added', hasAdded);
+            updateFilterAvailability('removed', hasRemoved);
+            updateFilterAvailability('modified', hasModified);
+            updateFilterAvailability('unchanged', hasUnchanged);
+        }}
+        
+        function updateFilterAvailability(filterType, isAvailable) {{
+            const capitalizedType = filterType.charAt(0).toUpperCase() + filterType.slice(1);
+            const label = document.getElementById('filterLabel' + capitalizedType);
+            const box = document.getElementById('filterBox' + capitalizedType);
+            
+            if (!label || !box) return;
+            
+            if (!isAvailable) {{
+                // Disable the filter
+                label.style.opacity = '0.3';
+                label.style.cursor = 'not-allowed';
+                label.onclick = null;
+                box.style.opacity = '0.3';
+                
+                // Uncheck if it was checked
+                if (sideBySideFilters[filterType]) {{
+                    sideBySideFilters[filterType] = false;
+                    box.innerHTML = '';
+                    box.style.borderWidth = '2px';
+                }}
+            }} else {{
+                // Enable the filter
+                label.style.opacity = '1';
+                label.style.cursor = 'pointer';
+                label.onclick = () => toggleSideBySideFilter(filterType);
+                box.style.opacity = '1';
+            }}
         }}
         
         function computeLineDiff(lines1, lines2) {{
@@ -2239,7 +2317,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 
                 if (lineContent === null) {{
                     // Empty placeholder for alignment
-                    html += '<div class="code-line" style="background: #2d2d2d; opacity: 0.3;">' +
+                    html += '<div class="code-line empty-placeholder" style="background: #2d2d2d; opacity: 0.3;">' +
                                 '<span class="code-line-number"></span>' +
                                 '<span class="code-line-content">&nbsp;</span>' +
                              '</div>';
@@ -2253,22 +2331,180 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         cssClass = 'modified';
                     }}
                     
-                    // Escape HTML
-                    const escaped = lineContent
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#039;');
+                    let contentHtml;
+                    
+                    // For modified lines, highlight the specific differences
+                    if (item.type === 'modified' && item.line1 && item.line2) {{
+                        contentHtml = highlightInlineDiff(item.line1, item.line2, side);
+                    }} else {{
+                        // Escape HTML for non-modified lines
+                        contentHtml = lineContent
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#039;');
+                    }}
                     
                     html += '<div class="code-line ' + cssClass + '">' +
                                 '<span class="code-line-number">' + (lineNum || '') + '</span>' +
-                                '<span class="code-line-content">' + escaped + '</span>' +
+                                '<span class="code-line-content">' + contentHtml + '</span>' +
                              '</div>';
                 }}
             }});
             
             return html;
+        }}
+        
+        function highlightInlineDiff(line1, line2, side) {{
+            const lineToShow = side === 'left' ? line1 : line2;
+            const otherLine = side === 'left' ? line2 : line1;
+            
+            // Use character-level diff to find exact differences
+            const charDiff = Diff.diffChars(line1, line2);
+            
+            let html = '';
+            let currentIndex = 0;
+            
+            charDiff.forEach((part) => {{
+                const value = part.value;
+                
+                // Escape HTML
+                const escaped = value
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+                
+                if (side === 'left' && part.removed) {{
+                    // Highlight removed parts on left side
+                    html += '<mark class="inline-diff-highlight">' + escaped + '</mark>';
+                }} else if (side === 'right' && part.added) {{
+                    // Highlight added parts on right side
+                    html += '<mark class="inline-diff-highlight">' + escaped + '</mark>';
+                }} else if (!part.added && !part.removed) {{
+                    // Unchanged parts - no highlight
+                    html += escaped;
+                }}
+                // Skip parts that don't belong to this side (added on left, removed on right)
+            }});
+            
+            return html;
+        }}
+        
+        // Track which filters are active (none by default)
+        const sideBySideFilters = {{
+            added: false,
+            removed: false,
+            modified: false,
+            unchanged: false
+        }};
+        
+        function toggleSideBySideFilter(filterType) {{
+            // Toggle the filter state
+            sideBySideFilters[filterType] = !sideBySideFilters[filterType];
+            
+            // Update visual indicator (checkmark)
+            const box = document.getElementById('filterBox' + filterType.charAt(0).toUpperCase() + filterType.slice(1));
+            if (sideBySideFilters[filterType]) {{
+                // Show checkmark
+                box.innerHTML = '<span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: bold; color: #1f2937;">✓</span>';
+                box.style.borderWidth = '3px';
+            }} else {{
+                // Remove checkmark
+                box.innerHTML = '';
+                box.style.borderWidth = '2px';
+            }}
+            
+            // Apply filter
+            applySideBySideFilter();
+        }}
+        
+        function applySideBySideFilter() {{
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            if (!leftPane || !rightPane) return;
+            
+            // Check if any filter is active
+            const anyFilterActive = Object.values(sideBySideFilters).some(v => v === true);
+            
+            const leftLines = leftPane.querySelectorAll('.code-line');
+            const rightLines = rightPane.querySelectorAll('.code-line');
+            
+            // If no filters active, show all lines
+            if (!anyFilterActive) {{
+                leftLines.forEach(line => {{ line.style.display = ''; }});
+                rightLines.forEach(line => {{ line.style.display = ''; }});
+                return;
+            }}
+            
+            // Check if added or removed filters are active (empty lines needed for alignment)
+            const showEmptyLines = sideBySideFilters.added || sideBySideFilters.removed;
+            
+            // Otherwise, show only lines matching active filters (OR logic)
+            leftLines.forEach((line) => {{
+                const isAdded = line.classList.contains('added');
+                const isRemoved = line.classList.contains('removed');
+                const isModified = line.classList.contains('modified');
+                const isEmpty = line.classList.contains('empty-placeholder');
+                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
+                
+                let shouldShow = false;
+                if (isAdded && sideBySideFilters.added) shouldShow = true;
+                if (isRemoved && sideBySideFilters.removed) shouldShow = true;
+                if (isModified && sideBySideFilters.modified) shouldShow = true;
+                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
+                
+                // Show empty placeholders ONLY when added or removed filters are active
+                if (isEmpty && showEmptyLines) {{
+                    shouldShow = true;
+                }}
+                
+                line.style.display = shouldShow ? '' : 'none';
+            }});
+            
+            rightLines.forEach((line) => {{
+                const isAdded = line.classList.contains('added');
+                const isRemoved = line.classList.contains('removed');
+                const isModified = line.classList.contains('modified');
+                const isEmpty = line.classList.contains('empty-placeholder');
+                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
+                
+                let shouldShow = false;
+                if (isAdded && sideBySideFilters.added) shouldShow = true;
+                if (isRemoved && sideBySideFilters.removed) shouldShow = true;
+                if (isModified && sideBySideFilters.modified) shouldShow = true;
+                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
+                
+                // Show empty placeholders ONLY when added or removed filters are active
+                if (isEmpty && showEmptyLines) {{
+                    shouldShow = true;
+                }}
+                
+                line.style.display = shouldShow ? '' : 'none';
+            }});
+        }}
+        
+        function resetSideBySideFilter() {{
+            // Uncheck all filters
+            sideBySideFilters.added = false;
+            sideBySideFilters.removed = false;
+            sideBySideFilters.modified = false;
+            sideBySideFilters.unchanged = false;
+            
+            // Remove all checkmarks
+            ['Added', 'Removed', 'Modified', 'Unchanged'].forEach(type => {{
+                const box = document.getElementById('filterBox' + type);
+                if (box) {{
+                    box.innerHTML = '';
+                    box.style.borderWidth = '2px';
+                }}
+            }});
+            
+            // Apply filter (will show all lines since no filter is active)
+            applySideBySideFilter();
         }}
         
         function syncPaneScrolling(leftPaneId, rightPaneId) {{
@@ -2578,9 +2814,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     <div class="container">
         <div class="header">
             <a href="https://github.com/mabombo/kdiff" target="_blank" class="header-logo" title="View kdiff on GitHub">
-                <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" />
+                <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/images/kdiff_logo_3.png" alt="kdiff logo" />
             </a>
-            <h1>🔍 kdiff - Detailed Comparison Report</h1>
+            <h1>kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
                 <div class="metadata-item">
@@ -2624,7 +2860,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <span class="info-icon" title="Search filters resources by name only, not by resource content">ⓘ</span>
                         <input type="text" 
                                id="resourceSearch" 
-                               placeholder="🔍 Filter resources by name..." 
+                               placeholder="Filter resources by name..." 
                                oninput="filterResources(this.value)"
                                style="flex: 1; padding: 10px 14px; border: 2.5px solid #9ca3af; border-radius: 8px; font-size: 15px; font-weight: 500; outline: none; transition: all 0.2s;">
                         <button id="clearSearch" onclick="clearFilter()" style="padding: 10px 14px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none;">✕ Clear</button>
@@ -2691,25 +2927,28 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <span class="close" onclick="closeDiffModal()">&times;</span>
                 </div>
             </div>
-            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;">
-                <span style="font-weight: 600; color: #64748b;">Legend:</span>
-                <div style="display: flex; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #dcfce7; border: 1px solid #86efac; border-radius: 3px;"></div>
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: #64748b;">Filter:</span>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div onclick="toggleSideBySideFilter('added')" id="filterLabelAdded" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #dcfce7; border: 2px solid #86efac; border-radius: 3px; position: relative;"></div>
                         <span style="color: #059669;">Added</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('removed')" id="filterLabelRemoved" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #fee2e2; border: 2px solid #fca5a5; border-radius: 3px; position: relative;"></div>
                         <span style="color: #dc2626;">Removed</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('modified')" id="filterLabelModified" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #93c5fd; border-radius: 3px; position: relative;"></div>
                         <span style="color: #3b82f6;">Modified</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('unchanged')" id="filterLabelUnchanged" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxUnchanged" style="width: 20px; height: 20px; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 3px; position: relative;"></div>
                         <span style="color: #475569;">Unchanged</span>
                     </div>
+                    <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
+                        Reset Filters
+                    </button>
                 </div>
             </div>
             <div class="sidebyside-container">

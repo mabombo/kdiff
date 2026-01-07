@@ -1,6 +1,73 @@
+# kdiff v1.3.0 - Enhanced Diff Visualization & Professional Output
+
+## New Features
+
+### Inline Character-Level Highlighting
+- **Precise diff visualization**: Modified lines now highlight only the specific characters that changed
+- **Yellow highlighting**: Changed characters marked with bright yellow background for easy identification
+- **Dual-pane highlighting**: Left pane shows removed characters, right pane shows added characters
+- **jsdiff integration**: Uses industry-standard diffChars() algorithm for accurate comparison
+- **Secure rendering**: HTML escaping prevents XSS vulnerabilities
+
+### Interactive Filter System
+- **Clickable filter boxes**: Click on Added, Removed, Modified, or Unchanged to filter visible lines
+- **Visual indicators**: Active filters show checkmark (\u2713) for clear state tracking
+- **OR logic**: Multiple filters combine to show all matching line types
+- **Reset button**: One-click to clear all filters and restore full view
+- **Default off**: All filters disabled initially, showing complete diff
+
+### Smart Filter Management
+- **Auto-detection**: System analyzes each file to detect available line types
+- **Auto-disable**: Filters for non-existent line types are automatically disabled
+- **Visual feedback**: Disabled filters shown with reduced opacity and disabled cursor
+- **Empty line control**: Placeholder lines only shown when needed (Added/Removed filters active)
+
+### Professional Console Output
+- **No emojis**: All console output uses clean text markers
+- **Clear status**: [OK], [ERROR], [WARNING] for unambiguous messaging
+- **Professional suggestions**: Simple "Suggestion:" prompts without decoration
+- **Enterprise-ready**: Suitable for corporate and CI/CD environments
+
+## Documentation & Standards
+
+### Updated Documentation
+- **Professional README**: Concise, clear, emoji-free documentation
+- **Clean markdown**: All docs updated to professional style
+- **Python 3.10+**: Minimum version requirement updated throughout
+- **Repository cleanup**: Internal docs excluded from tracking
+
+### Repository Organization
+- **Renamed images folder**: loghi/ renamed to images/ for clarity
+- **Logo consolidation**: Kept only active logo file
+- **Updated references**: All paths updated across codebase
+- **Cleaner .gitignore**: Organized exclusions for better maintenance
+
+## Technical Improvements
+
+### Filter System Architecture
+- **State management**: JavaScript object tracks filter state
+- **Event handling**: Clean onclick handlers with proper propagation
+- **CSS transitions**: Smooth hover effects and visual feedback
+- **DOM manipulation**: Efficient show/hide logic for filtered lines
+
+### Code Quality
+- **Python 3.10+**: Modern Python features and type hints
+- **Security**: HTML escaping in all user-facing content
+- **Performance**: Optimized filter application and line rendering
+- **Maintainability**: Clear code structure and documentation
+
+## Upgrade Notes
+
+- Minimum Python version is now 3.10 (previously 3.8)
+- No breaking changes to CLI interface
+- All existing features remain functional
+- HTML reports fully backward compatible
+
+---
+
 # kdiff v1.2.0 - Enhanced Search & UI Improvements
 
-## 🔍 New Features
+## New Features
 
 ### Real-time Resource Search
 - **Live filtering**: Search resources by name with instant results while typing
@@ -10,7 +77,7 @@
 - **Info icon**: Added tooltip explaining search filters by name only
 
 ### UI/UX Enhancements
-- **Info icons**: Added ⓘ icons with tooltips for better user guidance
+- **Info icons**: Added info icons with tooltips for better user guidance
   - Next to "changes" badge: explains count represents JSON fields modified
   - Next to search box: clarifies search works on resource names only
 - **Improved search box visibility**: Enhanced borders, shadows, and sizing
@@ -23,13 +90,13 @@
 - **Group controls**: Small "+/−" buttons for individual resource groups
 - **Global control**: "+/− All" button for expanding/collapsing everything
 
-## 🎨 Design Updates
+## Design Updates
 - Enhanced search input with gray border (#9ca3af) and subtle shadow
 - Info icons with hover effect (black → blue transition with scale)
 - Yellow highlight (#ffeb3b) for search matches
 - Improved button hierarchy and visual consistency
 
-## 🐛 Bug Fixes
+## Bug Fixes
 - Fixed search state restoration when clearing filters
 - Improved keyboard interaction with search field
 - Better tooltip positioning and visibility
@@ -38,7 +105,7 @@
 
 # kdiff v1.1.1 - Docker Experience Improvements
 
-## 🐳 Docker Enhancements
+## Docker Enhancements
 
 ### Smart Browser Detection
 - **Automatic Docker environment detection**: Prevents browser open failures in containers
@@ -53,7 +120,7 @@
 - **Relative paths**: Uses relative paths for easy copy-paste from any directory
 - **User-friendly messages**: Clear instructions when browser auto-open is not available
 
-## 🔧 Technical Improvements
+## Technical Improvements
 - Added `is_running_in_docker()` detection function
 - Checks for `/.dockerenv` file and Docker cgroup
 - Prevents unnecessary error messages in containerized environments
@@ -62,7 +129,7 @@
 
 # kdiff v1.1.0 - Enhanced User Experience & Reporting
 
-## 🎉 New Features
+## New Features
 
 ### Improved CLI Help System
 - **Comprehensive parameter documentation** with detailed descriptions
