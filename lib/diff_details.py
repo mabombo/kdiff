@@ -209,6 +209,52 @@ def get_kind_color(kind: str) -> str:
     return colors.get(kind, '#374151')
 
 
+def get_namespace_color(namespace: str) -> str:
+    """
+    Ritorna un colore solido univoco per ogni namespace.
+    
+    Args:
+        namespace: Nome del namespace Kubernetes
+    
+    Returns:
+        Codice colore HEX (es. "#667eea")
+    
+    Palette colori:
+        - Colori solidi distinti e vibranti per differenziare visualmente i namespace
+        - Hash-based per consistenza: stesso namespace = stesso colore
+    
+    Uso:
+        - Badge namespace nei report HTML
+        - Identificazione visiva rapida quando si confrontano multipli namespace
+    """
+    # Hash del namespace per ottenere un indice consistente
+    hash_value = sum(ord(c) for c in namespace)
+    
+    # Palette di colori solidi vibranti e distinti
+    colors = [
+        "#667eea",  # indigo
+        "#f56565",  # red
+        "#38b2ac",  # teal
+        "#48bb78",  # green
+        "#ed8936",  # orange
+        "#9f7aea",  # purple
+        "#ed64a6",  # pink
+        "#4299e1",  # blue
+        "#ecc94b",  # yellow
+        "#f687b3",  # light pink
+        "#4fd1c5",  # cyan
+        "#fc8181",  # light red
+        "#9ae6b4",  # light green
+        "#fbd38d",  # light orange
+        "#a78bfa",  # light purple
+        "#63b3ed",  # light blue
+    ]
+    
+    # Seleziona colore basato su hash
+    index = hash_value % len(colors)
+    return colors[index]
+
+
 # ============================================
 # MISSING RESOURCES TABLE - Risorse Esclusive
 # ============================================
@@ -632,19 +678,22 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         if not changed:
             continue
         
-        # Estrai Kind e Name dal file JSON
+        # Estrai Kind, Name e Namespace dal file JSON
         try:
             f1 = c1_dir / base
             if f1.exists():
                 obj = json.load(open(f1))
                 kind = obj.get('kind', 'Unknown')
                 name = obj.get('metadata', {}).get('name', 'unknown')
+                namespace = obj.get('metadata', {}).get('namespace', None)
             else:
                 kind = 'Unknown'
                 name = 'unknown'
+                namespace = None
         except:
             kind = 'Unknown'
             name = 'unknown'
+            namespace = None
         
         # Inizializza lista per nuovo Kind
         if kind not in resources_by_kind:
@@ -655,6 +704,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             'base': base,
             'name': name,
             'kind': kind,
+            'namespace': namespace,
             'changed': changed
         })
     
@@ -676,6 +726,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         for resource in resources:
             base = resource['base']
             name = resource['name']
+            namespace = resource.get('namespace')
             changed = resource['changed']
             
             # ----------------------------------------
@@ -777,6 +828,12 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             # ----------------------------------------
             # 2.4 Genera HTML sezione risorsa (collapsabile)
             # ----------------------------------------
+            # Prepara il namespace badge se disponibile con colore dinamico
+            namespace_badge = ''
+            if namespace:
+                ns_color = get_namespace_color(namespace)
+                namespace_badge = f'<span class="namespace-badge" style="background-color: {ns_color};">{html_lib.escape(namespace)}</span>'
+            
             resources_html.append(f'''
                 <div class="resource-section" id="resource-{base.replace('.', '-')}">
                     <div class="resource-header" style="border-left: 4px solid {color};">
@@ -784,6 +841,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                             <div class="resource-title">
                                 <span class="toggle-icon-small" id="toggle-res-{base.replace('.', '-')}">▼</span>
                                 <span class="resource-name">{name}</span>
+                                {namespace_badge}
                             </div>
                         </div>
                         <div class="resource-stats">
@@ -1346,6 +1404,25 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             font-size: 1.3em;
             font-weight: 600;
             color: #111827;
+        }}
+        
+        .namespace-badge {{
+            display: inline-block;
+            margin-left: 12px;
+            padding: 4px 12px;
+            color: white;
+            font-size: 0.75em;
+            font-weight: 500;
+            border-radius: 12px;
+            text-transform: lowercase;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }}
+        
+        .namespace-badge:hover {{
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }}
         
         .resource-file {{
