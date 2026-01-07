@@ -56,7 +56,7 @@ def read_json_text(p: Path):
         return p.read_text(encoding='utf-8', errors='ignore').splitlines(keepends=True)
 
 
-def generateste_configmap_diff(pth1: Path, pth2: Path) -> str:
+def generate_configmap_diff(pth1: Path, pth2: Path) -> str:
     """
     Generate a more useful diff for ConfigMap by comparing data.* line by line.
     
@@ -157,7 +157,7 @@ def main():
         2. Per ogni file, cerca corrispondente in dir2
         3. Se manca in dir2 → missing_in_2
         4. Se esiste in entrambi, compares:
-           a. ConfigMap? → usa generateste_configmap_diff
+           a. ConfigMap? → usa generate_configmap_diff
            b. Altro? → usa diff JSON standard
         5. Scansiona dir2 per file che non esistono in dir1 → missing_in_1
         6. Genera summary.json con statistiche
@@ -217,7 +217,7 @@ def main():
         # Caso 2: file esiste in entrambi, compares contenuto
         
         # Prova prima con diff intelligente per ConfigMap
-        configmap_diff = generateste_configmap_diff(pth, other)
+        configmap_diff = generate_configmap_diff(pth, other)
         
         if configmap_diff:
             # È un ConfigMap E ha differenze
