@@ -76,15 +76,18 @@ def open_html_in_browser(html_path: Path) -> bool:
     if is_running_in_docker():
         return False
     
+    # Convert to absolute path
+    abs_path = html_path.resolve()
+    
     import platform
     try:
         system = platform.system()
         if system == 'Darwin':  # macOS
-            subprocess.run(['open', str(html_path)], check=True)
+            subprocess.run(['open', str(abs_path)], check=True)
         elif system == 'Linux':
-            subprocess.run(['xdg-open', str(html_path)], check=True)
+            subprocess.run(['xdg-open', str(abs_path)], check=True)
         elif system == 'Windows':
-            subprocess.run(['start', str(html_path)], shell=True, check=True)
+            subprocess.run(['start', str(abs_path)], shell=True, check=True)
         else:
             return False
         return True
