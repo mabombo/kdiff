@@ -6,6 +6,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 echo "Running Python test suite..."
 python3 "$ROOT/tests/test_kdiff.py"
 
+echo ""
+echo "Running CR discovery test suite..."
+python3 "$ROOT/tests/test_cr_discovery.py"
+
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
