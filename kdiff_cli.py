@@ -121,12 +121,12 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
                 
                 # CRITICAL connectivity errors (terminate execution)
                 if 'does not exist' in stderr:
-                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Context '{context}' does not exist in kubeconfig", file=sys.stderr)
-                    print(f"{YELLOW}💡 Suggestion:{RESET} Verify with 'kubectl config get-contexts'", file=sys.stderr)
+                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Context '{context}' does not exist in kubeconfig", file=sys.stderr)
+                    print(f"{YELLOW}Suggestion:{RESET} Verify with 'kubectl config get-contexts'", file=sys.stderr)
                     sys.exit(2)
                 elif 'no such host' in stderr or 'dial tcp' in stderr:
-                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Unable to connect to cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}💡 Possible causes:{RESET}", file=sys.stderr)
+                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Unable to connect to cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}Possible causes:{RESET}", file=sys.stderr)
                     print(f"  - Cluster unreachable (DNS, network, firewall)", file=sys.stderr)
                     print(f"  - VPN not active", file=sys.stderr)
                     print(f"  - API server unavailable", file=sys.stderr)
@@ -138,15 +138,15 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
                             print(f"  - Unresolvable hostname: {hostname_match.group(1)}", file=sys.stderr)
                     sys.exit(2)
                 elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
-                    print(f"\n{RED}✗ CRITICAL ERROR:{RESET} Connection timeout to cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}💡 Suggestion:{RESET} Check network connectivity and that cluster is active", file=sys.stderr)
+                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Connection timeout to cluster '{context}'", file=sys.stderr)
+                    print(f"{YELLOW}Suggestion:{RESET} Check network connectivity and that cluster is active", file=sys.stderr)
                     sys.exit(2)
                 
                 # NON-critical errors (permissions, empty resources, etc)
                 elif 'Forbidden' in stderr or 'forbidden' in stderr:
-                    print(f"[{context}] {RED}✗{RESET} Insufficient permissions for {kind} at cluster level.", file=sys.stderr)
+                    print(f"[{context}] {RED}[ERROR]{RESET} Insufficient permissions for {kind} at cluster level.", file=sys.stderr)
                     if not namespace:
-                        print(f"[{context}] {YELLOW}💡 Suggestion:{RESET} Specify a namespace with -n <namespace>", file=sys.stderr)
+                        print(f"[{context}] {YELLOW}Suggestion:{RESET} Specify a namespace with -n <namespace>", file=sys.stderr)
                     has_errors = True
                 elif stderr:
                     print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
@@ -178,8 +178,8 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
     
     # Final check: if no resources retrieved, it could be a serious problem
     if resource_count == 0 and has_errors:
-        print(f"\n{RED}✗ WARNING:{RESET} No resources retrieved from '{context}' due to errors.", file=sys.stderr)
-        print(f"{YELLOW}💡 Suggestion:{RESET} Resolve errors above before continuing.", file=sys.stderr)
+        print(f"\n{RED}[WARNING]:{RESET} No resources retrieved from '{context}' due to errors.", file=sys.stderr)
+        print(f"{YELLOW}Suggestion:{RESET} Resolve errors above before continuing.", file=sys.stderr)
         return False
     
     return True
@@ -324,13 +324,13 @@ Default resources compared:
     
     # If both clusters failed fetch, exit
     if not success1 and not success2:
-        print(f"\n{RED}✗ FATAL ERROR:{RESET} Unable to retrieve resources from both clusters.", file=sys.stderr)
+        print(f"\n{RED}[ERROR] FATAL ERROR:{RESET} Unable to retrieve resources from both clusters.", file=sys.stderr)
         sys.exit(2)
     elif not success1:
-        print(f"\n{RED}✗ ERROR:{RESET} Unable to retrieve resources from '{args.c1}'.", file=sys.stderr)
+        print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c1}'.", file=sys.stderr)
         print(f"{YELLOW}Continuing anyway with available resources from '{args.c2}'...{RESET}", file=sys.stderr)
     elif not success2:
-        print(f"\n{RED}✗ ERROR:{RESET} Unable to retrieve resources from '{args.c2}'.", file=sys.stderr)
+        print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c2}'.", file=sys.stderr)
         print(f"{YELLOW}Continuing anyway with available resources from '{args.c1}'...{RESET}", file=sys.stderr)
 
     print("Comparing...")
@@ -344,12 +344,12 @@ Default resources compared:
     html_report = outdir / 'diff-details.html'
 
     if rc == 0:
-        print(f"\n{GREEN}✅ Clusters are equal for the verified resources.{RESET}")
-        print(f"📊 HTML Report: {html_report}")
+        print(f"\n{GREEN}[OK] Clusters are equal for the verified resources.{RESET}")
+        print(f"HTML Report: {html_report}")
         
         # Try to open HTML report in browser
         if open_html_in_browser(html_report):
-            print(f"{GREEN}🌐 Opening report in browser...{RESET}")
+            print(f"{GREEN}Opening report in browser...{RESET}")
         else:
             # Show OS-specific command to open the file
             import platform
@@ -366,11 +366,11 @@ Default resources compared:
                 cmd = f"start {file_path}"
             else:
                 cmd = f"<browser> {file_path}"
-            print(f"{YELLOW}💡 Open manually: {cmd}{RESET}")
+            print(f"{YELLOW}Open manually: {cmd}{RESET}")
         
         sys.exit(0)
     else:
-        print(f"\n{YELLOW}⚠️ Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
+        print(f"\n{YELLOW}[WARNING] Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
         print(f"JSON Summary: {json_out}")
         
         # Report console (solo se richiesto formato text)
@@ -380,11 +380,11 @@ Default resources compared:
         # Report Markdown/HTML semplici (commentati - usare diff-details invece)
         # subprocess.run(['python3', str(LIB / 'report_md.py'), str(json_out), str(diffs), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
         
-        print(f"📊 HTML Report: {html_report}")
+        print(f"HTML Report: {html_report}")
         
         # Try to open HTML report in browser
         if open_html_in_browser(html_report):
-            print(f"{GREEN}🌐 Opening report in browser...{RESET}")
+            print(f"{GREEN}Opening report in browser...{RESET}")
         else:
             # Show OS-specific command to open the file
             import platform
@@ -401,7 +401,7 @@ Default resources compared:
                 cmd = f"start {file_path}"
             else:
                 cmd = f"<browser> {file_path}"
-            print(f"{YELLOW}💡 Open manually: {cmd}{RESET}")
+            print(f"{YELLOW}Open manually: {cmd}{RESET}")
         
         sys.exit(1)
 

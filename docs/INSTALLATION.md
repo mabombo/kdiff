@@ -1,21 +1,17 @@
-<div align="center">
-  <img src="../loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
-</div>
+# Installation and Distribution Guide
 
-# Guida Installazione e Distribuzione kdiff
+## Installation Options
 
-## Opzioni di Distribuzione
+kdiff offers three main installation methods:
 
-kdiff offre tre modalità principali per l'installazione, ordinate per semplicità:
+### 1. Automated Installation Script (Recommended)
 
-### 1. 🚀 Installazione automatica con script (CONSIGLIATO)
-
-**Vantaggi:**
-- ✅ Funziona sempre (nessuna dipendenza Python)
-- ✅ Non richiede pip/setuptools
-- ✅ Installabile senza permessi root (PREFIX=~/.local)
-- ✅ Compatibile con sistemi "externally-managed"
-- ✅ Rapido e affidabile
+**Advantages:**
+- Works on any system (no Python dependencies required)
+- Does not require pip/setuptools
+- Installable without root permissions (PREFIX=~/.local)
+- Compatible with "externally-managed" systems
+- Fast and reliable
 
 **Come funziona:**
 
@@ -35,15 +31,15 @@ rm -rf ~/.local/lib/kdiff ~/.local/bin/kdiff
 
 ---
 
-### 2. 📦 Installazione con pip (virtual environment)
+### 2. Installation with pip (virtual environment)
 
-**Vantaggi:**
-- ✅ Standard Python
-- ✅ Gestione dipendenze (anche se kdiff non ne ha)
-- ✅ Integrazione con requirements.txt
+**Advantages:**
+- Python standard approach
+- Dependency management (though kdiff has none)
+- Integration with requirements.txt
 
-**Requisiti:**
-- Python 3.8+
+**Requirements:**
+- Python 3.10+
 - Virtual environment (richiesto su sistemi managed)
 
 **Come funziona:**
@@ -74,14 +70,14 @@ pip uninstall kdiff
 
 ---
 
-### 3. 🔧 Uso diretto (senza installazione)
+### 3. Direct Usage (without installation)
 
-**Vantaggi:**
-- ✅ Zero setup
-- ✅ Perfetto per testing/sviluppo
-- ✅ Nessuna modifica al sistema
+**Advantages:**
+- Zero setup required
+- Perfect for testing/development
+- No system modifications
 
-**Come funziona:**
+**How it works:**
 
 ```bash
 git clone <repo>

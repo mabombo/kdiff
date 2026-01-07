@@ -1,7 +1,3 @@
-<div align="center">
-  <img src="loghi/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
-</div>
-
 # Changelog
 
 All notable changes to kdiff will be documented in this file.
@@ -20,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Automatic expansion of groups containing matches
   * Smart state restoration when clearing search
   * Data preservation using `data-original-text` attribute
-- **Info icons (ⓘ)** with helpful tooltips
+- **Info icons** with helpful tooltips
   * Next to "changes" badge explaining counter meaning
   * Next to search box clarifying "filters by name only"
   * Interactive hover effects (blue color, scale animation)

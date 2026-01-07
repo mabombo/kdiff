@@ -797,7 +797,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-cluster1="{html_lib.escape(cluster1)}"
                                     data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showDiffFromButton(this)">
-                                📄 View Diff
+                                View Diff
                             </button>
                             <button class="view-sidebyside-btn" 
                                     data-json1="{json1_base64}"
@@ -806,7 +806,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-cluster1="{html_lib.escape(cluster1)}"
                                     data-cluster2="{html_lib.escape(cluster2)}"
                                     onclick="event.stopPropagation(); showSideBySideDiff(this)">
-                                ⚖️ Side-by-Side
+                                Side-by-Side
                             </button>
                         </div>
                     </div>
@@ -2816,7 +2816,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <a href="https://github.com/mabombo/kdiff" target="_blank" class="header-logo" title="View kdiff on GitHub">
                 <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" />
             </a>
-            <h1>🔍 kdiff - Detailed Comparison Report</h1>
+            <h1>kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
                 <div class="metadata-item">
@@ -2860,7 +2860,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <span class="info-icon" title="Search filters resources by name only, not by resource content">ⓘ</span>
                         <input type="text" 
                                id="resourceSearch" 
-                               placeholder="🔍 Filter resources by name..." 
+                               placeholder="Filter resources by name..." 
                                oninput="filterResources(this.value)"
                                style="flex: 1; padding: 10px 14px; border: 2.5px solid #9ca3af; border-radius: 8px; font-size: 15px; font-weight: 500; outline: none; transition: all 0.2s;">
                         <button id="clearSearch" onclick="clearFilter()" style="padding: 10px 14px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none;">✕ Clear</button>

@@ -1,6 +1,6 @@
 # kdiff v1.2.0 - Enhanced Search & UI Improvements
 
-## 🔍 New Features
+## New Features
 
 ### Real-time Resource Search
 - **Live filtering**: Search resources by name with instant results while typing
@@ -10,7 +10,7 @@
 - **Info icon**: Added tooltip explaining search filters by name only
 
 ### UI/UX Enhancements
-- **Info icons**: Added ⓘ icons with tooltips for better user guidance
+- **Info icons**: Added info icons with tooltips for better user guidance
   - Next to "changes" badge: explains count represents JSON fields modified
   - Next to search box: clarifies search works on resource names only
 - **Improved search box visibility**: Enhanced borders, shadows, and sizing
@@ -23,13 +23,13 @@
 - **Group controls**: Small "+/−" buttons for individual resource groups
 - **Global control**: "+/− All" button for expanding/collapsing everything
 
-## 🎨 Design Updates
+## Design Updates
 - Enhanced search input with gray border (#9ca3af) and subtle shadow
 - Info icons with hover effect (black → blue transition with scale)
 - Yellow highlight (#ffeb3b) for search matches
 - Improved button hierarchy and visual consistency
 
-## 🐛 Bug Fixes
+## Bug Fixes
 - Fixed search state restoration when clearing filters
 - Improved keyboard interaction with search field
 - Better tooltip positioning and visibility
@@ -38,7 +38,7 @@
 
 # kdiff v1.1.1 - Docker Experience Improvements
 
-## 🐳 Docker Enhancements
+## Docker Enhancements
 
 ### Smart Browser Detection
 - **Automatic Docker environment detection**: Prevents browser open failures in containers
@@ -53,7 +53,7 @@
 - **Relative paths**: Uses relative paths for easy copy-paste from any directory
 - **User-friendly messages**: Clear instructions when browser auto-open is not available
 
-## 🔧 Technical Improvements
+## Technical Improvements
 - Added `is_running_in_docker()` detection function
 - Checks for `/.dockerenv` file and Docker cgroup
 - Prevents unnecessary error messages in containerized environments
@@ -62,7 +62,7 @@
 
 # kdiff v1.1.0 - Enhanced User Experience & Reporting
 
-## 🎉 New Features
+## New Features
 
 ### Improved CLI Help System
 - **Comprehensive parameter documentation** with detailed descriptions

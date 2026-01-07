@@ -167,10 +167,10 @@ def main():
     # ========================================
     # 4. SUMMARY OVERVIEW - Box Colorato
     # ========================================
-    print_section_header("📊 Summary Overview")
+    print_section_header("Summary Overview")
     
     if total_changes == 0:
-        print(f"{GREEN}✅ Clusters are IDENTICAL for the compared resources!{RESET}\n")
+        print(f"{GREEN}[OK] Clusters are IDENTICAL for the compared resources!{RESET}\n")
         print(f"{DIM}No differences detected between the two clusters.{RESET}")
         return
     
@@ -248,7 +248,7 @@ def main():
     # 7. TOP MODIFIED RESOURCES
     # ========================================
     if different > 0:
-        print_section_header(f"🔍 Top {min(args.top, len(summary.get('different', [])))} Modified Resources")
+        print_section_header(f"Top {min(args.top, len(summary.get('different', [])))} Modified Resources")
         
         for i, f in enumerate(summary.get('different', [])[:args.top], 1):
             # Estrai informazioni dal nome file

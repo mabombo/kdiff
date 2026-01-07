@@ -2,6 +2,15 @@
 *.log
 *.diff
 
+# Logos and images
+loghi/
+
+# Internal documentation
+README_IT.md
+DOCKER_HUB_GUIDE.md
+CONTRIBUTING.md
+RELEASE_GUIDE.md
+
 # Kubernetes config (security)
 .kube/
 kubeconfig
