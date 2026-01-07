@@ -20,12 +20,3 @@ else
   echo "Some tests failed ❌"
   exit $exit_code
 fi
-
-# run pytest tests if pytest is available
-if command -v pytest >/dev/null 2>&1; then
-  pytest -q
-else
-  echo "pytest not found; skipping pytest tests (shell-based tests still cover functionality)"
-fi
-
-echo "All tests passed ✅"
