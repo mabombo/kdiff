@@ -1,3 +1,86 @@
+# kdiff v1.4.0 - Custom Resources & Multiple Namespaces
+
+## New Features
+
+### Custom Resources (CR) Comparison
+- **Auto-discovery mode**: Automatically detects all Custom Resources available in both clusters
+- **Filtered discovery**: Specify API groups to compare (e.g., `--include-cr istio.io,cert-manager.io`)
+- **Universal CR support**: Works with any CR type - Elasticsearch, Istio, Cert-Manager, Strimzi, etc.
+- **Smart filtering**: Excludes native Kubernetes resources from discovery
+- **Dual-cluster merge**: Discovers CRs from both clusters and compares union of resources
+
+#### Usage Examples
+```bash
+# Auto-discover and compare all CRs
+kdiff -c1 prod -c2 staging -n myapp --include-cr
+
+# Compare specific CR groups only
+kdiff -c1 prod -c2 staging -n myapp --include-cr istio.io,cert-manager.io
+
+# Compare native resources + CRs
+kdiff -c1 prod -c2 staging -n myapp -r deployment,service --include-cr
+```
+
+### Multiple Namespace Support
+- **Comma-separated namespaces**: Compare resources across multiple namespaces in one run
+- **Automatic merging**: Fetches and combines resources from all specified namespaces
+- **Backward compatible**: Single namespace usage still works as before
+- **Flexible syntax**: Handles spaces gracefully (e.g., `connect, default, kube-system`)
+
+#### Usage Examples
+```bash
+# Single namespace (classic mode)
+kdiff -c1 prod -c2 staging -n myapp
+
+# Multiple namespaces
+kdiff -c1 prod -c2 staging -n connect,default,kube-system
+
+# Multiple namespaces with CRs
+kdiff -c1 prod -c2 staging -n myapp,monitoring --include-cr
+```
+
+### Comprehensive Test Suite
+- **14 new test cases**: CR discovery, namespace parsing, error handling
+- **Mock testing**: Tests run without real cluster dependencies
+- **Coverage improvements**: Auto-discovery, group filtering, multi-cluster merging
+- **Namespace tests**: Validates parsing of single, multiple, and space-separated values
+
+## Fixes
+
+### Browser Auto-Open in Tests
+- **KDIFF_NO_BROWSER support**: Environment variable now respected in bin/kdiff
+- **No sandbox errors**: Tests run cleanly without browser security issues
+- **Consistent behavior**: Both entry points (bin/kdiff, kdiff_cli.py) handle flag uniformly
+
+### Test Suite Cleanup
+- **Removed pytest check**: Eliminated confusing "pytest not found" message
+- **Cleaner output**: Streamlined test execution messages
+- **Unified framework**: All tests consistently use unittest
+
+## Technical Improvements
+
+### CR Discovery Architecture
+- **kubectl integration**: Uses `kubectl api-resources` for discovery
+- **API group filtering**: Intelligent matching on resource group suffixes
+- **Error handling**: Graceful fallback when cluster unreachable
+- **Resource validation**: Excludes native K8s resources from CR results
+
+### Multiple Namespace Implementation
+- **Per-namespace fetching**: Executes kubectl for each namespace independently
+- **Result merging**: Combines items[] arrays from all namespace responses
+- **Unified processing**: Merged resources processed identically to single-namespace mode
+- **No duplicate fetching**: Efficient resource retrieval across namespaces
+
+## Upgrade Notes
+
+- No breaking changes to existing CLI interface
+- New `--include-cr` flag is optional and backward compatible
+- Multiple namespace feature works with existing `-n` parameter
+- All previous features remain fully functional
+- Requires kubectl access to target clusters for CR discovery
+
+---
+
 # kdiff v1.3.0 - Enhanced Diff Visualization & Professional Output
 
 ## New Features

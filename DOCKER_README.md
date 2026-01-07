@@ -167,4 +167,4 @@ For issues, questions, or contributions, please visit:
 
 ## Version
 
-Current version: 1.3.0
+Current version: 1.4.0

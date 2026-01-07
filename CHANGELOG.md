@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-01-07
+
+### Added
+- **Custom Resources (CR) Comparison**
+  * New `--include-cr` flag for comparing Kubernetes Custom Resources
+  * Auto-discovery mode: automatically detects all CRs in both clusters
+  * Filtered mode: specify API groups (e.g., `--include-cr istio.io,cert-manager.io`)
+  * Seamless integration with existing resource fetching logic
+  * Discovers CRs from both clusters and compares union of resources
+  * Supports any CR type: Elasticsearch, Istio VirtualServices, Cert-Manager Certificates, etc.
+- **Multiple Namespace Support**
+  * Comma-separated namespace values in `-n` parameter
+  * Example: `-n connect,default,kube-system`
+  * Fetches and merges resources from all specified namespaces
+  * Maintains backward compatibility with single namespace
+- **Comprehensive Test Suite**
+  * New test_cr_discovery.py with 14 test cases
+  * Mock kubectl api-resources for testing without real clusters
+  * Tests for auto-discovery, group filtering, error handling
+  * Tests for namespace parsing (single, multiple, with spaces)
+  * Verification of CR union from both clusters
+
+### Fixed
+- **Browser Auto-Open During Tests**
+  * Added `KDIFF_NO_BROWSER` environment variable support in bin/kdiff
+  * Prevents sandbox errors when running test suite
+  * Browser opening properly disabled during test execution
+  * Aligns bin/kdiff behavior with kdiff_cli.py
+
+### Changed
+- **Test Suite Improvements**
+  * Removed obsolete pytest check from run_tests.sh
+  * Cleaner test output without confusing messages
+  * All tests use unittest framework consistently
+
 ## [1.3.0] - 2026-01-07
 
 ### Added
