@@ -1935,6 +1935,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }}
         
+        /* Disabled filter labels */
+        [id^="filterLabel"][style*="opacity: 0.3"] {{
+            pointer-events: none;
+        }}
+        
+        [id^="filterLabel"][style*="opacity: 0.3"]:hover .filter-box {{
+            transform: none;
+            box-shadow: none;
+        }}
+        
         @media print {{
             body {{
                 background: white;
@@ -2138,6 +2148,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             leftPane.innerHTML = renderDiffContent(diff, 'left');
             rightPane.innerHTML = renderDiffContent(diff, 'right');
             
+            // Detect which line types are present in the diff
+            detectAndDisableFilters(diff);
+            
             // Apply current zoom level
             applySideBySideZoom();
             
@@ -2145,6 +2158,49 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
             
             modal.style.display = 'block';
+        }}
+        
+        function detectAndDisableFilters(diff) {{
+            // Count each type of line
+            const hasAdded = diff.some(item => item.type === 'added');
+            const hasRemoved = diff.some(item => item.type === 'removed');
+            const hasModified = diff.some(item => item.type === 'modified');
+            const hasUnchanged = diff.some(item => item.type === 'unchanged');
+            
+            // Enable/disable filters based on presence
+            updateFilterAvailability('added', hasAdded);
+            updateFilterAvailability('removed', hasRemoved);
+            updateFilterAvailability('modified', hasModified);
+            updateFilterAvailability('unchanged', hasUnchanged);
+        }}
+        
+        function updateFilterAvailability(filterType, isAvailable) {{
+            const capitalizedType = filterType.charAt(0).toUpperCase() + filterType.slice(1);
+            const label = document.getElementById('filterLabel' + capitalizedType);
+            const box = document.getElementById('filterBox' + capitalizedType);
+            
+            if (!label || !box) return;
+            
+            if (!isAvailable) {{
+                // Disable the filter
+                label.style.opacity = '0.3';
+                label.style.cursor = 'not-allowed';
+                label.onclick = null;
+                box.style.opacity = '0.3';
+                
+                // Uncheck if it was checked
+                if (sideBySideFilters[filterType]) {{
+                    sideBySideFilters[filterType] = false;
+                    box.innerHTML = '';
+                    box.style.borderWidth = '2px';
+                }}
+            }} else {{
+                // Enable the filter
+                label.style.opacity = '1';
+                label.style.cursor = 'pointer';
+                label.onclick = () => toggleSideBySideFilter(filterType);
+                box.style.opacity = '1';
+            }}
         }}
         
         function computeLineDiff(lines1, lines2) {{
