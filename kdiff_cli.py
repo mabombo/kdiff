@@ -70,10 +70,10 @@ def is_running_in_docker() -> bool:
 def open_html_in_browser(html_path: Path) -> bool:
     """Try to open HTML file in the default browser.
     Returns True if successful, False otherwise.
-    Skips opening if running in Docker container.
+    Skips opening if running in Docker container or if KDIFF_NO_BROWSER env var is set.
     """
-    # Skip browser opening in Docker environment
-    if is_running_in_docker():
+    # Skip browser opening in Docker environment or if disabled via env var
+    if is_running_in_docker() or os.getenv('KDIFF_NO_BROWSER'):
         return False
     
     # Convert to absolute path
