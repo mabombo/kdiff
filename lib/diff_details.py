@@ -2814,7 +2814,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     <div class="container">
         <div class="header">
             <a href="https://github.com/mabombo/kdiff" target="_blank" class="header-logo" title="View kdiff on GitHub">
-                <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/loghi/kdiff_logo_3.png" alt="kdiff logo" />
+                <img src="https://raw.githubusercontent.com/mabombo/kdiff/main/images/kdiff_logo_3.png" alt="kdiff logo" />
             </a>
             <h1>kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>

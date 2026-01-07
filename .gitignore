@@ -3,7 +3,7 @@
 *.diff
 
 # Logos and images
-loghi/
+images/
 
 # Internal documentation
 README_IT.md

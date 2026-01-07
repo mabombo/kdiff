@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="images/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # kdiff - Kubernetes Resource Comparison Tool
 
 kdiff is a Python tool for comparing Kubernetes configurations between two clusters or contexts. It identifies missing, different, or cluster-specific resources and generates interactive HTML reports with detailed diff visualization.
