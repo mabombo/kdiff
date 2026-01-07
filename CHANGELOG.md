@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-01-07
+
+### Added
+- **Inline Character-Level Highlighting** in side-by-side diff view
+  * Uses jsdiff library's diffChars() for precise character-level comparison
+  * Yellow highlighting for modified characters within changed lines
+  * Separate highlighting for left (removed) and right (added) panes
+  * HTML escaping for security
+- **Interactive Filter System** for side-by-side view
+  * Clickable filter boxes for Added, Removed, Modified, and Unchanged lines
+  * Visual checkmarks (✓) indicate active filters
+  * OR logic for multiple filter combinations
+  * Reset Filters button to clear all selections
+  * All filters disabled by default (show all lines)
+- **Smart Empty Line Handling**
+  * Empty placeholder lines only shown when Added or Removed filters are active
+  * Hidden when viewing Modified or Unchanged lines alone
+  * Maintains proper alignment in side-by-side view
+- **Auto-Disable Unavailable Filters**
+  * Automatically detects which line types exist in each file
+  * Disables and grays out filters for non-existent line types
+  * Visual indication with reduced opacity and disabled cursor
+  * Prevents confusion with inapplicable filters
+
+### Changed
+- **Professional Console Output**
+  * Removed all emoji from error, warning, and success messages
+  * Replaced with text markers: [OK], [ERROR], [WARNING]
+  * Cleaner "Suggestion:" prompts without decoration
+  * Professional appearance suitable for enterprise environments
+- **Documentation Overhaul**
+  * Completely rewritten README.md: concise, professional, no emojis
+  * Removed visual clutter from all markdown files
+  * Updated to professional tone throughout
+  * Excluded internal documentation from repository
+- **Python Version Requirement**
+  * Minimum Python version updated from 3.8 to 3.10
+  * Updated in all configuration files and documentation
+  * Removed Python 3.8 and 3.9 from classifiers
+- **Repository Organization**
+  * Renamed loghi/ folder to images/
+  * Kept only the active logo file
+  * Updated all references throughout codebase
+  * Excluded internal docs from git tracking
+
+### Improved
+- **Side-by-Side Diff UX**
+  * Filter state management with JavaScript object
+  * Hover effects on filter boxes
+  * Smooth transitions and visual feedback
+  * Better organization of filter controls
+- **HTML Report Quality**
+  * Removed emojis from button labels and titles
+  * Professional button text: "Side-by-Side", "View Diff"
+  * Cleaner search input placeholder
+  * Consistent styling across all UI elements
+
 ## [1.2.0] - 2026-01-07
 
 ### Added

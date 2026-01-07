@@ -18,7 +18,7 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 
 setup(
     name="kdiff",
-    version="1.2.0",
+    version="1.3.0",
     description="Kubernetes cluster comparison tool with intelligent diff detection",
     long_description=long_description,
     long_description_content_type="text/markdown",
