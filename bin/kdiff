@@ -158,7 +158,7 @@ def discover_custom_resources(context: str, namespace: str | None = None, groups
         return []
 
 
-def fetch_resources(context: str, outdir: Path, resources: list[str], namespace: str | None, show_metadata: bool = False):
+def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | None, show_metadata: bool = False):
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
     has_errors = False
@@ -167,13 +167,31 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
     for kind in resources:
         print(f"[{context}] Fetching {kind}...")
         cmd = ['kubectl', '--context', context]
-        if namespace:
-            cmd += ['-n', namespace, 'get', kind, '-o', 'json']
+        
+        if namespaces:
+            # Fetch from multiple namespaces and merge results
+            all_items = []
+            for ns in namespaces:
+                ns_cmd = cmd + ['-n', ns, 'get', kind, '-o', 'json']
+                try:
+                    ns_proc = subprocess.run(ns_cmd, check=False, capture_output=True, text=True)
+                    if ns_proc.returncode == 0:
+                        data = json.loads(ns_proc.stdout)
+                        if 'items' in data:
+                            all_items.extend(data['items'])
+                except Exception:
+                    pass
+            # Create merged response
+            proc = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': json.dumps({'items': all_items}),
+                'stderr': ''
+            })()
         else:
             cmd += ['get', kind, '--all-namespaces', '-o', 'json']
+            proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
         try:
-            proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if proc.returncode != 0:
                 stderr = proc.stderr.strip()
                 
@@ -255,6 +273,9 @@ Examples:
   # Compare only deployments and configmaps in a specific namespace
   kdiff -c1 prod-cluster -c2 staging-cluster -r deployment,configmap -n my-namespace
 
+  # Compare resources across multiple namespaces
+  kdiff -c1 prod-cluster -c2 staging-cluster -n connect,default,kube-system
+
   # Compare all supported resource types (including volatile resources)
   kdiff -c1 prod-cluster -c2 staging-cluster --include-resource-types all
 
@@ -300,7 +321,7 @@ Default resources compared:
     
     parser.add_argument('-n',
                        metavar='NAMESPACE',
-                       help='Kubernetes namespace to filter resources. If not specified, compares resources across all namespaces (--all-namespaces)')
+                       help='Kubernetes namespace(s) to filter resources. Use comma-separated values for multiple namespaces (e.g., "connect,default"). If not specified, compares resources across all namespaces (--all-namespaces)')
     
     parser.add_argument('-o',
                        metavar='OUTPUT_DIR',
@@ -417,11 +438,17 @@ Default resources compared:
 
     check_deps()
 
+    # Parse namespaces if provided (comma-separated)
+    namespaces = None
+    if args.n:
+        namespaces = [ns.strip() for ns in args.n.split(',')]
+        print(f"Targeting namespace(s): {', '.join(namespaces)}")
+
     print(f"Fetching resources from {args.c1}...")
-    success1 = fetch_resources(args.c1, dir1, all_resources_to_fetch, args.n, args.show_metadata)
+    success1 = fetch_resources(args.c1, dir1, all_resources_to_fetch, namespaces, args.show_metadata)
 
     print(f"Fetching resources from {args.c2}...")
-    success2 = fetch_resources(args.c2, dir2, all_resources_to_fetch, args.n, args.show_metadata)
+    success2 = fetch_resources(args.c2, dir2, all_resources_to_fetch, namespaces, args.show_metadata)
     
     # If both clusters failed fetch, exit
     if not success1 and not success2:

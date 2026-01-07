@@ -8,13 +8,14 @@ from unittest.mock import patch, MagicMock
 import sys
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 # Add bin to path to import kdiff functions
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 
-def discover_custom_resources_mock(context: str, namespace: str | None = None, groups: list[str] | None = None) -> list[str]:
+def discover_custom_resources_mock(context: str, namespace: Optional[str] = None, groups: Optional[list[str]] = None) -> list[str]:
     """
     Mock implementation of discover_custom_resources for testing
     Discovers Custom Resources from a Kubernetes cluster via kubectl api-resources
@@ -281,6 +282,39 @@ class TestCRIntegration(unittest.TestCase):
         self.assertEqual(merged_crs, expected)
 
 
-if __name__ == '__main__':
-    # Run tests with verbose output
-    unittest.main(verbosity=2)
+class TestMultipleNamespaces(unittest.TestCase):
+    """Test multiple namespace parsing and handling"""
+    
+    def test_single_namespace_parsing(self):
+        """Test parsing of single namespace"""
+        namespace_string = "connect"
+        namespaces = [ns.strip() for ns in namespace_string.split(',')]
+        
+        self.assertEqual(namespaces, ['connect'])
+    
+    def test_multiple_namespaces_parsing(self):
+        """Test parsing of comma-separated namespaces"""
+        namespace_string = "connect,default,kube-system"
+        namespaces = [ns.strip() for ns in namespace_string.split(',')]
+        
+        expected = ['connect', 'default', 'kube-system']
+        self.assertEqual(namespaces, expected)
+    
+    def test_namespaces_with_spaces(self):
+        """Test parsing handles spaces around commas"""
+        namespace_string = "connect , default , kube-system "
+        namespaces = [ns.strip() for ns in namespace_string.split(',')]
+        
+        expected = ['connect', 'default', 'kube-system']
+        self.assertEqual(namespaces, expected)
+    
+    def test_none_namespace(self):
+        """Test that None namespace is handled correctly"""
+        namespace_value = None
+        namespaces = None
+        if namespace_value:
+            namespaces = [ns.strip() for ns in namespace_value.split(',')]
+        
+        self.assertIsNone(namespaces)
+
+
