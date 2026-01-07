@@ -1922,6 +1922,19 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
         }}
         
+        /* Filter box hover effect */
+        .filter-box {{
+            transition: all 0.2s ease;
+        }}
+        
+        #filterLabelAdded:hover .filter-box,
+        #filterLabelRemoved:hover .filter-box,
+        #filterLabelModified:hover .filter-box,
+        #filterLabelUnchanged:hover .filter-box {{
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }}
+        
         @media print {{
             body {{
                 background: white;
@@ -2248,7 +2261,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 
                 if (lineContent === null) {{
                     // Empty placeholder for alignment
-                    html += '<div class="code-line" style="background: #2d2d2d; opacity: 0.3;">' +
+                    html += '<div class="code-line empty-placeholder" style="background: #2d2d2d; opacity: 0.3;">' +
                                 '<span class="code-line-number"></span>' +
                                 '<span class="code-line-content">&nbsp;</span>' +
                              '</div>';
@@ -2322,6 +2335,120 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }});
             
             return html;
+        }}
+        
+        // Track which filters are active (none by default)
+        const sideBySideFilters = {{
+            added: false,
+            removed: false,
+            modified: false,
+            unchanged: false
+        }};
+        
+        function toggleSideBySideFilter(filterType) {{
+            // Toggle the filter state
+            sideBySideFilters[filterType] = !sideBySideFilters[filterType];
+            
+            // Update visual indicator (checkmark)
+            const box = document.getElementById('filterBox' + filterType.charAt(0).toUpperCase() + filterType.slice(1));
+            if (sideBySideFilters[filterType]) {{
+                // Show checkmark
+                box.innerHTML = '<span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: bold; color: #1f2937;">✓</span>';
+                box.style.borderWidth = '3px';
+            }} else {{
+                // Remove checkmark
+                box.innerHTML = '';
+                box.style.borderWidth = '2px';
+            }}
+            
+            // Apply filter
+            applySideBySideFilter();
+        }}
+        
+        function applySideBySideFilter() {{
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            if (!leftPane || !rightPane) return;
+            
+            // Check if any filter is active
+            const anyFilterActive = Object.values(sideBySideFilters).some(v => v === true);
+            
+            const leftLines = leftPane.querySelectorAll('.code-line');
+            const rightLines = rightPane.querySelectorAll('.code-line');
+            
+            // If no filters active, show all lines
+            if (!anyFilterActive) {{
+                leftLines.forEach(line => {{ line.style.display = ''; }});
+                rightLines.forEach(line => {{ line.style.display = ''; }});
+                return;
+            }}
+            
+            // Check if added or removed filters are active (empty lines needed for alignment)
+            const showEmptyLines = sideBySideFilters.added || sideBySideFilters.removed;
+            
+            // Otherwise, show only lines matching active filters (OR logic)
+            leftLines.forEach((line) => {{
+                const isAdded = line.classList.contains('added');
+                const isRemoved = line.classList.contains('removed');
+                const isModified = line.classList.contains('modified');
+                const isEmpty = line.classList.contains('empty-placeholder');
+                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
+                
+                let shouldShow = false;
+                if (isAdded && sideBySideFilters.added) shouldShow = true;
+                if (isRemoved && sideBySideFilters.removed) shouldShow = true;
+                if (isModified && sideBySideFilters.modified) shouldShow = true;
+                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
+                
+                // Show empty placeholders ONLY when added or removed filters are active
+                if (isEmpty && showEmptyLines) {{
+                    shouldShow = true;
+                }}
+                
+                line.style.display = shouldShow ? '' : 'none';
+            }});
+            
+            rightLines.forEach((line) => {{
+                const isAdded = line.classList.contains('added');
+                const isRemoved = line.classList.contains('removed');
+                const isModified = line.classList.contains('modified');
+                const isEmpty = line.classList.contains('empty-placeholder');
+                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
+                
+                let shouldShow = false;
+                if (isAdded && sideBySideFilters.added) shouldShow = true;
+                if (isRemoved && sideBySideFilters.removed) shouldShow = true;
+                if (isModified && sideBySideFilters.modified) shouldShow = true;
+                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
+                
+                // Show empty placeholders ONLY when added or removed filters are active
+                if (isEmpty && showEmptyLines) {{
+                    shouldShow = true;
+                }}
+                
+                line.style.display = shouldShow ? '' : 'none';
+            }});
+        }}
+        
+        function resetSideBySideFilter() {{
+            // Uncheck all filters
+            sideBySideFilters.added = false;
+            sideBySideFilters.removed = false;
+            sideBySideFilters.modified = false;
+            sideBySideFilters.unchanged = false;
+            
+            // Remove all checkmarks
+            ['Added', 'Removed', 'Modified', 'Unchanged'].forEach(type => {{
+                const box = document.getElementById('filterBox' + type);
+                if (box) {{
+                    box.innerHTML = '';
+                    box.style.borderWidth = '2px';
+                }}
+            }});
+            
+            // Apply filter (will show all lines since no filter is active)
+            applySideBySideFilter();
         }}
         
         function syncPaneScrolling(leftPaneId, rightPaneId) {{
@@ -2744,25 +2871,28 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <span class="close" onclick="closeDiffModal()">&times;</span>
                 </div>
             </div>
-            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;">
-                <span style="font-weight: 600; color: #64748b;">Legend:</span>
-                <div style="display: flex; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #dcfce7; border: 1px solid #86efac; border-radius: 3px;"></div>
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: #64748b;">Filter:</span>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div onclick="toggleSideBySideFilter('added')" id="filterLabelAdded" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #dcfce7; border: 2px solid #86efac; border-radius: 3px; position: relative;"></div>
                         <span style="color: #059669;">Added</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('removed')" id="filterLabelRemoved" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #fee2e2; border: 2px solid #fca5a5; border-radius: 3px; position: relative;"></div>
                         <span style="color: #dc2626;">Removed</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('modified')" id="filterLabelModified" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #93c5fd; border-radius: 3px; position: relative;"></div>
                         <span style="color: #3b82f6;">Modified</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
+                    <div onclick="toggleSideBySideFilter('unchanged')" id="filterLabelUnchanged" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <div class="filter-box" id="filterBoxUnchanged" style="width: 20px; height: 20px; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 3px; position: relative;"></div>
                         <span style="color: #475569;">Unchanged</span>
                     </div>
+                    <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
+                        Reset Filters
+                    </button>
                 </div>
             </div>
             <div class="sidebyside-container">
