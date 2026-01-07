@@ -100,6 +100,60 @@ def load_normalize_func():
     return getattr(mod, 'normalize')
 
 
+def discover_custom_resources(context: str, namespace: str | None = None, groups: list[str] | None = None) -> list[str]:
+    """Discover Custom Resources (CR) in the cluster.
+    
+    Args:
+        context: Kubernetes context name
+        namespace: Optional namespace to filter (for namespaced resources)
+        groups: Optional list of API groups to filter (e.g., ['istio.io', 'cert-manager.io'])
+    
+    Returns:
+        List of CR types in format 'plural.group.domain' (e.g., 'virtualservices.networking.istio.io')
+    """
+    try:
+        # Get all API resources
+        cmd = ['kubectl', '--context', context, 'api-resources', '--verbs=list', '-o', 'name']
+        if namespace:
+            cmd.insert(3, '--namespaced=true')
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            return []
+        
+        all_resources = [r.strip() for r in result.stdout.strip().split('\n') if r.strip()]
+        
+        # Filter for Custom Resources (have dots in name, indicating API group)
+        # Exclude native K8s resources
+        native_prefixes = [
+            'deployments', 'pods', 'services', 'configmaps', 'secrets', 'namespaces',
+            'nodes', 'persistentvolumes', 'persistentvolumeclaims', 'serviceaccounts',
+            'roles', 'rolebindings', 'clusterroles', 'clusterrolebindings',
+            'ingresses', 'networkpolicies', 'replicasets', 'statefulsets', 'daemonsets',
+            'jobs', 'cronjobs', 'horizontalpodautoscalers', 'endpoints', 'events',
+            'limitranges', 'resourcequotas', 'componentstatuses', 'replicationcontrollers'
+        ]
+        
+        custom_resources = []
+        for resource in all_resources:
+            # CR must have a dot (API group) and not be a native resource
+            if '.' in resource:
+                resource_name = resource.split('.')[0]
+                if resource_name not in native_prefixes:
+                    # If groups filter is specified, check if resource belongs to those groups
+                    if groups:
+                        resource_group = '.'.join(resource.split('.')[1:])  # e.g., 'networking.istio.io'
+                        if any(resource_group.endswith(g) or resource_group == g for g in groups):
+                            custom_resources.append(resource)
+                    else:
+                        custom_resources.append(resource)
+        
+        return custom_resources
+    except Exception as e:
+        print(f"Warning: Failed to discover custom resources in '{context}': {e}", file=sys.stderr)
+        return []
+
+
 def fetch_resources(context: str, outdir: Path, resources: list[str], namespace: str | None, show_metadata: bool = False):
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
@@ -215,6 +269,12 @@ Examples:
   # Compare excluding secrets and configmaps
   kdiff -c1 prod-cluster -c2 staging-cluster --exclude-resources secret,configmap
 
+  # Compare including all Custom Resources (auto-discovery)
+  kdiff -c1 prod-cluster -c2 staging-cluster -n my-namespace --include-cr
+
+  # Compare including only specific Custom Resource groups
+  kdiff -c1 prod-cluster -c2 staging-cluster -n my-namespace --include-cr istio.io,cert-manager.io
+
 Default resources compared:
   deployment, statefulset, daemonset, configmap, secret, persistentvolumeclaim,
   serviceaccount, role, rolebinding, horizontalpodautoscaler, cronjob, job
@@ -265,6 +325,12 @@ Default resources compared:
                        metavar='TYPES',
                        help=f'Comma-separated list of resource types to exclude from comparison. Supported resources: {", ".join(ALL_SUPPORTED_RESOURCES)}')
     
+    parser.add_argument('--include-cr',
+                       nargs='?',
+                       const='__ALL__',
+                       metavar='GROUPS',
+                       help='Include Custom Resources (CR) in comparison. Without arguments, auto-discovers all CRs. With arguments, specify API groups comma-separated (e.g., "istio.io,cert-manager.io")')
+    
     parser.add_argument('--show-metadata',
                        action='store_true',
                        help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
@@ -298,9 +364,40 @@ Default resources compared:
     if args.exclude_resources:
         exclude_list = [r.strip().lower() for r in args.exclude_resources.split(',') if r.strip()]
         resources = [r for r in resources if r.lower() not in exclude_list]
-        if not resources:
+        if not resources and not args.include_cr:
             print("Error: All resources excluded. Nothing to compare.", file=sys.stderr)
             sys.exit(2)
+    
+    # Handle Custom Resources (CR)
+    custom_resources = []
+    if args.include_cr is not None:
+        cr_groups = None
+        if args.include_cr != '__ALL__':
+            # User specified specific groups
+            cr_groups = [g.strip() for g in args.include_cr.split(',') if g.strip()]
+            print(f"Discovering Custom Resources for groups: {', '.join(cr_groups)}")
+        else:
+            print("Auto-discovering all Custom Resources...")
+        
+        # Discover CRs from both clusters (union)
+        cr_set = set()
+        for ctx in [args.c1, args.c2]:
+            discovered = discover_custom_resources(ctx, args.n, cr_groups)
+            cr_set.update(discovered)
+        
+        custom_resources = sorted(list(cr_set))
+        
+        if custom_resources:
+            print(f"Found {len(custom_resources)} Custom Resource type(s): {', '.join(custom_resources[:5])}{' ...' if len(custom_resources) > 5 else ''}")
+        else:
+            print("No Custom Resources found matching criteria")
+    
+    # Combine native resources and custom resources
+    all_resources_to_fetch = resources + custom_resources
+    
+    if not all_resources_to_fetch:
+        print("Error: No resources to compare.", file=sys.stderr)
+        sys.exit(2)
 
     # Usa sempre la stessa directory per output (latest)
     outdir = Path(args.o) if args.o else Path('./kdiff_output/latest')
@@ -317,10 +414,10 @@ Default resources compared:
     check_deps()
 
     print(f"Fetching resources from {args.c1}...")
-    success1 = fetch_resources(args.c1, dir1, resources, args.n, args.show_metadata)
+    success1 = fetch_resources(args.c1, dir1, all_resources_to_fetch, args.n, args.show_metadata)
 
     print(f"Fetching resources from {args.c2}...")
-    success2 = fetch_resources(args.c2, dir2, resources, args.n, args.show_metadata)
+    success2 = fetch_resources(args.c2, dir2, all_resources_to_fetch, args.n, args.show_metadata)
     
     # If both clusters failed fetch, exit
     if not success1 and not success2:
