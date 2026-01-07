@@ -380,6 +380,7 @@ fi
             env = os.environ.copy()
             env['PATH'] = f"{bin_dir}:{env['PATH']}"
             env['RESP_DIR'] = str(resp_dir)
+            env['KDIFF_NO_BROWSER'] = '1'  # Prevent browser opening during tests
             
             result = subprocess.run(
                 [str(ROOT / 'bin' / 'kdiff'),
