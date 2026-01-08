@@ -179,7 +179,8 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
                         data = json.loads(ns_proc.stdout)
                         if 'items' in data:
                             all_items.extend(data['items'])
-                except Exception:
+                except (subprocess.SubprocessError, json.JSONDecodeError):
+                    # Ignore failed namespace fetch or invalid JSON
                     pass
             # Create merged response
             proc = type('obj', (object,), {

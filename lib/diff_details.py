@@ -351,7 +351,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
                     'location': f'Only in {cluster2}',
                     'location_class': 'missing-in-c1'
                 })
-        except Exception:
+        except (IOError, json.JSONDecodeError, KeyError):
+            # Ignore unreadable or malformed resource files
             pass
     
     # Caso 2: errori lettura file (nessuna risorsa generata)

@@ -93,7 +93,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                 m['annotations'].pop('kubectl.kubernetes.io/last-applied-configuration', None)
                 if not m['annotations']:
                     m.pop('annotations', None)
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
+            # Ignore malformed metadata structure
             pass
 
     # spec.template.metadata: remove annotations and labels
@@ -107,7 +108,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                     obj['spec']['template']['metadata'] = tm
                 elif 'metadata' in obj['spec']['template']:
                     obj['spec']['template'].pop('metadata', None)
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
+            # Ignore malformed spec.template structure
             pass
 
     # spec.jobTemplate.spec.template.metadata for CronJob
@@ -122,7 +124,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                         obj['spec']['jobTemplate']['spec']['template']['metadata'] = tm
                     elif 'metadata' in obj['spec']['jobTemplate']['spec']['template']:
                         obj['spec']['jobTemplate']['spec']['template'].pop('metadata', None)
-        except Exception:
+        except (KeyError, TypeError, AttributeError):
+            # Ignore malformed CronJob structure
             pass
 
     # Convert env arrays to key=name dictionaries
@@ -145,7 +148,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                             env_copy = {k: v for k, v in env_var.items() if k != 'name'}
                             env_dict[env_var['name']] = env_copy
                     container['env'] = env_dict
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
+        # Ignore malformed container structure
         pass
 
     # Converti env arrays per CronJob
@@ -169,7 +173,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
                                 env_copy = {k: v for k, v in env_var.items() if k != 'name'}
                                 env_dict[env_var['name']] = env_copy
                         container['env'] = env_dict
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
+        # Ignore malformed CronJob container structure
         pass
 
     # ========================================
@@ -181,7 +186,8 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
         if obj.get('kind') == 'Service' and 'spec' in obj:
             obj['spec'].pop('clusterIP', None)
             obj['spec'].pop('clusterIPs', None)
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
+        # Ignore malformed Service spec
         pass
 
     # Remove status

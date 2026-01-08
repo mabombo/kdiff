@@ -69,7 +69,7 @@ class TestSideBySideDiff(unittest.TestCase):
         # These IDs must be present in the generated HTML
         for element_id in required_ids:
             self.assertIsInstance(element_id, str)
-            self.assertTrue(len(element_id) > 0)
+            self.assertGreater(len(element_id), 0)
     
     def test_javascript_functions_present(self):
         """Test that required JavaScript functions exist"""
