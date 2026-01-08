@@ -229,3 +229,4 @@ MIT License - see [LICENSE](LICENSE)
 ## Version
 
 Current version: 1.4.0
+
