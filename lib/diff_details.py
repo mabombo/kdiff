@@ -436,13 +436,19 @@ def main():
     p.add_argument("outdir", help="Output directory where summary.json and cluster directories exist")
     p.add_argument('--cluster1', default='cluster1')
     p.add_argument('--cluster2', default='cluster2')
+    p.add_argument('--output-suffix', default='', help='Suffix to add to output filenames (e.g., _ns1_vs_ns2)')
     args = p.parse_args()
     
     # ========================================
     # 2. VALIDAZIONE FILE INPUT
     # ========================================
     outdir = Path(args.outdir)
-    summary_file = outdir / "summary.json"
+    
+    # Use suffix for input files if provided
+    if args.output_suffix:
+        summary_file = outdir / f"summary{args.output_suffix}.json"
+    else:
+        summary_file = outdir / "summary.json"
     
     if not summary_file.exists():
         print(f"Summary not found: {summary_file}", file=sys.stderr)
@@ -596,10 +602,14 @@ def main():
     # 7. SCRITTURA FILE OUTPUT
     # ========================================
     
-    # 7.1 Salva Markdown Report (commentato - mantenere solo HTML)
-    # md_text = "\n".join(md_lines)
-    # (outdir / "diff-details.md").write_text(md_text, encoding="utf-8")
-
+    # Determine output filenames based on suffix
+    if args.output_suffix:
+        json_filename = f"diff-details{args.output_suffix}.json"
+        html_filename = f"diff-details{args.output_suffix}.html"
+    else:
+        json_filename = "diff-details.json"
+        html_filename = "diff-details.html"
+    
     # 7.2 Salva JSON Report (strutturato per integrazione)
     json_output = {
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -608,7 +618,7 @@ def main():
         "total_resources": total_resources,
         "total_paths": total_paths
     }
-    (outdir / "diff-details.json").write_text(
+    (outdir / json_filename).write_text(
         json.dumps(json_output, indent=2, ensure_ascii=False),
         encoding="utf-8"
     )
@@ -618,10 +628,12 @@ def main():
         outdir, summary, details, counts_top,
         total_resources, total_paths,
         args.cluster1, args.cluster2,
-        c1_dir, c2_dir
+        c1_dir, c2_dir,
+        html_filename  # Pass the filename to the function
     )
-
-    print(f"Wrote detailed diff report: {outdir / 'diff-details.html'}")
+    
+    # Print success message with actual filename
+    print(f"Wrote detailed diff report: {outdir / html_filename}")
 
 
 
@@ -630,7 +642,7 @@ def main():
 # HTML REPORT GENERATOR - Report Interattivo
 # ============================================
 
-def generate_html_report(outdir, summary, details, counts_top, total_resources, total_paths, cluster1, cluster2, c1_dir, c2_dir):
+def generate_html_report(outdir, summary, details, counts_top, total_resources, total_paths, cluster1, cluster2, c1_dir, c2_dir, html_filename="diff-details.html"):
     """
     Genera report HTML interattivo con CSS/JavaScript avanzato.
     
@@ -645,6 +657,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         cluster2: Name secondo cluster
         c1_dir: Path directory cluster1
         c2_dir: Path directory cluster2
+        html_filename: Nome del file HTML da generare
     
     Output:
         - diff-details.html: Report HTML interattivo con:
@@ -3049,7 +3062,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
 </body>
 </html>'''
     
-    (outdir / "diff-details.html").write_text(html_content, encoding="utf-8")
+    (outdir / html_filename).write_text(html_content, encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime
 import importlib.util
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 LIB = ROOT / 'lib'
 
 # Default resources
@@ -103,19 +103,51 @@ def load_normalize_func():
     return getattr(mod, 'normalize')
 
 
-def fetch_resources(context: str, outdir: Path, resources: list[str], namespace: str | None, show_metadata: bool = False):
+def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | str | None, show_metadata: bool = False):
+    """
+    Fetch resources from a Kubernetes cluster.
+    
+    Args:
+        context: Kubernetes context name
+        outdir: Output directory for fetched resources
+        resources: List of resource types to fetch
+        namespaces: None (all namespaces), string (single namespace), or list (specific namespaces)
+        show_metadata: Whether to keep metadata in normalized output
+    """
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
     has_errors = False
     resource_count = 0
+    
+    # Determine namespace mode
+    if namespaces is None:
+        ns_list = [None]  # Fetch from all namespaces
+        ns_mode = "all"
+    elif isinstance(namespaces, str):
+        ns_list = [namespaces]  # Single namespace
+        ns_mode = "single"
+    else:
+        ns_list = namespaces  # Multiple specific namespaces
+        ns_mode = "multi"
 
     for kind in resources:
-        print(f"[{context}] Fetching {kind}...")
-        cmd = ['kubectl', '--context', context]
-        if namespace:
-            cmd += ['-n', namespace, 'get', kind, '-o', 'json']
-        else:
-            cmd += ['get', kind, '--all-namespaces', '-o', 'json']
+        for ns in ns_list:
+            if ns:
+                print(f"[{context}/{ns}] Fetching {kind}...")
+            else:
+                print(f"[{context}] Fetching {kind}...")
+                
+            cmd = ['kubectl', '--context', context]
+            if ns:
+                cmd += ['-n', ns, 'get', kind, '-o', 'json']
+            else:
+                cmd += ['get', kind, '--all-namespaces', '-o', 'json']
+
+            cmd = ['kubectl', '--context', context]
+            if ns:
+                cmd += ['-n', ns, 'get', kind, '-o', 'json']
+            else:
+                cmd += ['get', kind, '--all-namespaces', '-o', 'json']
 
         try:
             proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
@@ -147,9 +179,10 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
                 
                 # NON-critical errors (permissions, empty resources, etc)
                 elif 'Forbidden' in stderr or 'forbidden' in stderr:
-                    print(f"[{context}] {RED}[ERROR]{RESET} Insufficient permissions for {kind} at cluster level.", file=sys.stderr)
-                    if not namespace:
-                        print(f"[{context}] {YELLOW}Suggestion:{RESET} Specify a namespace with -n <namespace>", file=sys.stderr)
+                    ns_info = f" in namespace '{ns}'" if ns else " at cluster level"
+                    print(f"[{context}] {RED}[ERROR]{RESET} Insufficient permissions for {kind}{ns_info}.", file=sys.stderr)
+                    if not ns:
+                        print(f"[{context}] {YELLOW}Suggestion:{RESET} Specify a namespace with -n <namespace> or --namespaces", file=sys.stderr)
                     has_errors = True
                 elif stderr:
                     print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
@@ -161,13 +194,14 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
             data = json.loads(proc.stdout) if proc.stdout.strip() else {}
             items = data.get('items', [])
             if not items:
-                print(f"[{context}] Nessun oggetto {kind}.")
+                ns_info = f" in {ns}" if ns else ""
+                print(f"[{context}] Nessun oggetto {kind}{ns_info}.")
                 continue
             for item in items:
                 name = item.get('metadata', {}).get('name')
-                ns = item.get('metadata', {}).get('namespace')
-                if ns:
-                    fname = f"{kind}__{ns}__{name}.json"
+                item_ns = item.get('metadata', {}).get('namespace')
+                if item_ns:
+                    fname = f"{kind}__{item_ns}__{name}.json"
                 else:
                     fname = f"{kind}__{name}.json"
                 path = outdir / fname
@@ -190,14 +224,23 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespace:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='kdiff — Compare Kubernetes resources between two clusters',
+        description='kdiff — Compare Kubernetes resources between two clusters or multiple namespaces',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  # Compare all default resources between two clusters
+  # Two-cluster mode: Compare all default resources between two clusters
   kdiff -c1 prod-cluster -c2 staging-cluster
 
-  # Compare only deployments and configmaps in a specific namespace
+  # Two-cluster mode: Compare specific namespace
+  kdiff -c1 prod-cluster -c2 staging-cluster -n my-namespace
+
+  # Two-cluster mode: Compare multiple namespaces
+  kdiff -c1 prod-cluster -c2 staging-cluster --namespaces ns1,ns2,ns3
+
+  # Single-cluster mode: Compare multiple namespaces in same cluster
+  kdiff -c prod-cluster --namespaces ns1,ns2,ns3
+
+  # Compare only deployments and configmaps
   kdiff -c1 prod-cluster -c2 staging-cluster -r deployment,configmap -n my-namespace
 
   # Compare all supported resource types (including volatile resources)
@@ -224,14 +267,16 @@ Default resources compared:
         ''')
     
     parser.add_argument('-c1', 
-                       required=True, 
                        metavar='CONTEXT1',
                        help='First Kubernetes context name (e.g., prod-cluster). Use "kubectl config get-contexts" to see available contexts')
     
     parser.add_argument('-c2', 
-                       required=True,
                        metavar='CONTEXT2', 
                        help='Second Kubernetes context name to compare against (e.g., staging-cluster)')
+    
+    parser.add_argument('-c',
+                       metavar='CONTEXT',
+                       help='Single Kubernetes context for multi-namespace comparison. Requires --namespaces with at least 2 namespaces')
     
     parser.add_argument('-r',
                        metavar='RESOURCES',
@@ -239,7 +284,11 @@ Default resources compared:
     
     parser.add_argument('-n',
                        metavar='NAMESPACE',
-                       help='Kubernetes namespace to filter resources. If not specified, compares resources across all namespaces (--all-namespaces)')
+                       help='Kubernetes namespace to filter resources (single namespace). If not specified, compares resources across all namespaces (--all-namespaces)')
+    
+    parser.add_argument('--namespaces',
+                       metavar='NS1,NS2,...',
+                       help='Comma-separated list of namespaces to compare. Use with -c for single-cluster mode or with -c1/-c2 for two-cluster mode')
     
     parser.add_argument('-o',
                        metavar='OUTPUT_DIR',
@@ -273,6 +322,42 @@ Default resources compared:
                        help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
     
     args = parser.parse_args()
+
+    # Validate arguments and determine mode
+    single_cluster_mode = False
+    namespaces_list = None
+    
+    # Check for conflicting arguments
+    if args.c and (args.c1 or args.c2):
+        print("Error: Cannot specify -c together with -c1 or -c2", file=sys.stderr)
+        sys.exit(2)
+    
+    if args.n and args.namespaces:
+        print("Error: Cannot specify both -n and --namespaces", file=sys.stderr)
+        sys.exit(2)
+    
+    # Determine mode based on arguments
+    if args.c:
+        # Single-cluster mode
+        single_cluster_mode = True
+        if not args.namespaces:
+            print("Error: Single-cluster mode (-c) requires --namespaces with at least 2 namespaces", file=sys.stderr)
+            sys.exit(2)
+        namespaces_list = [ns.strip() for ns in args.namespaces.split(',') if ns.strip()]
+        if len(namespaces_list) < 2:
+            print("Error: Single-cluster mode requires at least 2 namespaces", file=sys.stderr)
+            sys.exit(2)
+    elif args.c1 and args.c2:
+        # Two-cluster mode
+        single_cluster_mode = False
+        if args.namespaces:
+            namespaces_list = [ns.strip() for ns in args.namespaces.split(',') if ns.strip()]
+    elif args.c1 or args.c2:
+        print("Error: Two-cluster mode requires both -c1 and -c2", file=sys.stderr)
+        sys.exit(2)
+    else:
+        print("Error: Must specify either -c (single-cluster mode) or -c1 and -c2 (two-cluster mode)", file=sys.stderr)
+        sys.exit(2)
 
     resources = RESOURCES.copy()
     if args.r:
@@ -311,102 +396,171 @@ Default resources compared:
     # Pulisce la directory se esiste già
     cleanup_output_dir(outdir)
     
-    # Use actual cluster names instead of generic cluster1/cluster2
-    dir1 = outdir / args.c1
-    dir2 = outdir / args.c2
-    diffs = outdir / 'diffs'
-    json_out = outdir / 'summary.json'
-
     check_deps()
 
-    print(f"Fetching resources from {args.c1}...")
-    success1 = fetch_resources(args.c1, dir1, resources, args.n, args.show_metadata)
-
-    print(f"Fetching resources from {args.c2}...")
-    success2 = fetch_resources(args.c2, dir2, resources, args.n, args.show_metadata)
-    
-    # If both clusters failed fetch, exit
-    if not success1 and not success2:
-        print(f"\n{RED}[ERROR] FATAL ERROR:{RESET} Unable to retrieve resources from both clusters.", file=sys.stderr)
-        sys.exit(2)
-    elif not success1:
-        print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c1}'.", file=sys.stderr)
-        print(f"{YELLOW}Continuing anyway with available resources from '{args.c2}'...{RESET}", file=sys.stderr)
-    elif not success2:
-        print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c2}'.", file=sys.stderr)
-        print(f"{YELLOW}Continuing anyway with available resources from '{args.c1}'...{RESET}", file=sys.stderr)
-
-    print("Comparing...")
-    # call compare.py
-    rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
-
-    # Report HTML interattivo dettagliato - SEMPRE generato (anche con 0 differenze)
-    subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
-    
-    # Path to the HTML report
-    html_report = outdir / 'diff-details.html'
-
-    if rc == 0:
-        print(f"\n{GREEN}[OK] Clusters are equal for the verified resources.{RESET}")
-        print(f"HTML Report: {html_report}")
+    if single_cluster_mode:
+        # Single-cluster multi-namespace mode
+        print(f"Mode: Single-cluster multi-namespace comparison")
+        print(f"Cluster: {args.c}")
+        print(f"Namespaces: {', '.join(namespaces_list)}")
         
-        # Try to open HTML report in browser
-        if open_html_in_browser(html_report):
-            print(f"{GREEN}Opening report in browser...{RESET}")
-        else:
-            # Show OS-specific command to open the file
-            import platform
-            system = platform.system()
-            
-            # Use the path as-is (it's already relative to output dir)
-            file_path = html_report
-            
-            if system == 'Darwin':  # macOS
-                cmd = f"open {file_path}"
-            elif system == 'Linux':
-                cmd = f"xdg-open {file_path}"
-            elif system == 'Windows':
-                cmd = f"start {file_path}"
-            else:
-                cmd = f"<browser> {file_path}"
-            print(f"{YELLOW}Open manually: {cmd}{RESET}")
+        # Perform pairwise comparisons between all namespaces
+        comparison_pairs = []
+        for i in range(len(namespaces_list)):
+            for j in range(i + 1, len(namespaces_list)):
+                comparison_pairs.append((namespaces_list[i], namespaces_list[j]))
         
-        sys.exit(0)
+        all_successes = []
+        for ns1, ns2 in comparison_pairs:
+            print(f"\n{'='*60}")
+            print(f"Comparing: {ns1} vs {ns2}")
+            print(f"{'='*60}")
+            
+            dir1 = outdir / f"{args.c}_{ns1}"
+            dir2 = outdir / f"{args.c}_{ns2}"
+            diffs = outdir / f'diffs_{ns1}_vs_{ns2}'
+            json_out = outdir / f'summary_{ns1}_vs_{ns2}.json'
+            
+            print(f"Fetching resources from {args.c}/{ns1}...")
+            success1 = fetch_resources(args.c, dir1, resources, ns1, args.show_metadata)
+            
+            print(f"Fetching resources from {args.c}/{ns2}...")
+            success2 = fetch_resources(args.c, dir2, resources, ns2, args.show_metadata)
+            
+            all_successes.append((success1, success2))
+            
+            if not success1 and not success2:
+                print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from both namespaces.", file=sys.stderr)
+                continue
+            elif not success1:
+                print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{ns1}'.", file=sys.stderr)
+                print(f"{YELLOW}Continuing with available resources from '{ns2}'...{RESET}", file=sys.stderr)
+            elif not success2:
+                print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{ns2}'.", file=sys.stderr)
+                print(f"{YELLOW}Continuing with available resources from '{ns1}'...{RESET}", file=sys.stderr)
+            
+            print("Comparing...")
+            rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
+            
+            # Generate HTML report for this comparison
+            subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), 
+                          '--cluster1', f"{args.c}/{ns1}", '--cluster2', f"{args.c}/{ns2}",
+                          '--output-suffix', f"_{ns1}_vs_{ns2}"])
+        
+        # Generate summary report for all comparisons
+        print(f"\n{'='*60}")
+        print(f"{GREEN}Multi-namespace comparison completed{RESET}")
+        print(f"Output directory: {outdir}")
+        print(f"{YELLOW}View individual comparison reports in the output directory{RESET}")
+        
     else:
-        print(f"\n{YELLOW}[WARNING] Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
-        print(f"JSON Summary: {json_out}")
-        
-        # Report console (solo se richiesto formato text)
-        if args.format == 'text':
-            subprocess.run(['python3', str(LIB / 'report.py'), str(json_out), str(diffs), '--cluster1', args.c1, '--cluster2', args.c2])
-        
-        # Report Markdown/HTML semplici (commentati - usare diff-details invece)
-        # subprocess.run(['python3', str(LIB / 'report_md.py'), str(json_out), str(diffs), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
-        
-        print(f"HTML Report: {html_report}")
-        
-        # Try to open HTML report in browser
-        if open_html_in_browser(html_report):
-            print(f"{GREEN}Opening report in browser...{RESET}")
+        # Two-cluster mode
+        print(f"Mode: Two-cluster comparison")
+        print(f"Cluster 1: {args.c1}")
+        print(f"Cluster 2: {args.c2}")
+        if namespaces_list:
+            print(f"Namespaces: {', '.join(namespaces_list)}")
+        elif args.n:
+            print(f"Namespace: {args.n}")
         else:
-            # Show OS-specific command to open the file
-            import platform
-            system = platform.system()
-            
-            # Use the path as-is (it's already relative to output dir)
-            file_path = html_report
-            
-            if system == 'Darwin':  # macOS
-                cmd = f"open {file_path}"
-            elif system == 'Linux':
-                cmd = f"xdg-open {file_path}"
-            elif system == 'Windows':
-                cmd = f"start {file_path}"
-            else:
-                cmd = f"<browser> {file_path}"
-            print(f"{YELLOW}Open manually: {cmd}{RESET}")
+            print(f"Namespaces: all")
         
-        sys.exit(1)
+        dir1 = outdir / args.c1
+        dir2 = outdir / args.c2
+        diffs = outdir / 'diffs'
+        json_out = outdir / 'summary.json'
+        
+        # Determine which namespace(s) to fetch
+        ns_to_fetch = namespaces_list if namespaces_list else args.n
+
+        print(f"Fetching resources from {args.c1}...")
+        success1 = fetch_resources(args.c1, dir1, resources, ns_to_fetch, args.show_metadata)
+
+        print(f"Fetching resources from {args.c2}...")
+        success2 = fetch_resources(args.c2, dir2, resources, ns_to_fetch, args.show_metadata)
+    
+        print(f"Fetching resources from {args.c2}...")
+        success2 = fetch_resources(args.c2, dir2, resources, ns_to_fetch, args.show_metadata)
+        
+        # If both clusters failed fetch, exit
+        if not success1 and not success2:
+            print(f"\n{RED}[ERROR] FATAL ERROR:{RESET} Unable to retrieve resources from both clusters.", file=sys.stderr)
+            sys.exit(2)
+        elif not success1:
+            print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c1}'.", file=sys.stderr)
+            print(f"{YELLOW}Continuing anyway with available resources from '{args.c2}'...{RESET}", file=sys.stderr)
+        elif not success2:
+            print(f"\n{RED}[ERROR]:{RESET} Unable to retrieve resources from '{args.c2}'.", file=sys.stderr)
+            print(f"{YELLOW}Continuing anyway with available resources from '{args.c1}'...{RESET}", file=sys.stderr)
+
+        print("Comparing...")
+        # call compare.py
+        rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
+
+        # Report HTML interattivo dettagliato - SEMPRE generato (anche con 0 differenze)
+        subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), '--cluster1', args.c1, '--cluster2', args.c2])
+        
+        # Path to the HTML report
+        html_report = outdir / 'diff-details.html'
+
+        if rc == 0:
+            print(f"\n{GREEN}[OK] Clusters are equal for the verified resources.{RESET}")
+            print(f"HTML Report: {html_report}")
+            
+            # Try to open HTML report in browser
+            if open_html_in_browser(html_report):
+                print(f"{GREEN}Opening report in browser...{RESET}")
+            else:
+                # Show OS-specific command to open the file
+                import platform
+                system = platform.system()
+                
+                # Use the path as-is (it's already relative to output dir)
+                file_path = html_report
+                
+                if system == 'Darwin':  # macOS
+                    cmd = f"open {file_path}"
+                elif system == 'Linux':
+                    cmd = f"xdg-open {file_path}"
+                elif system == 'Windows':
+                    cmd = f"start {file_path}"
+                else:
+                    cmd = f"<browser> {file_path}"
+                print(f"{YELLOW}Open manually: {cmd}{RESET}")
+            
+            sys.exit(0)
+        else:
+            print(f"\n{YELLOW}[WARNING] Differences found. See {diffs} for details.{RESET}", file=sys.stderr)
+            print(f"JSON Summary: {json_out}")
+            
+            # Report console (solo se richiesto formato text)
+            if args.format == 'text':
+                subprocess.run(['python3', str(LIB / 'report.py'), str(json_out), str(diffs), '--cluster1', args.c1, '--cluster2', args.c2])
+            
+            print(f"HTML Report: {html_report}")
+            
+            # Try to open HTML report in browser
+            if open_html_in_browser(html_report):
+                print(f"{GREEN}Opening report in browser...{RESET}")
+            else:
+                # Show OS-specific command to open the file
+                import platform
+                system = platform.system()
+                
+                # Use the path as-is (it's already relative to output dir)
+                file_path = html_report
+                
+                if system == 'Darwin':  # macOS
+                    cmd = f"open {file_path}"
+                elif system == 'Linux':
+                    cmd = f"xdg-open {file_path}"
+                elif system == 'Windows':
+                    cmd = f"start {file_path}"
+                else:
+                    cmd = f"<browser> {file_path}"
+                print(f"{YELLOW}Open manually: {cmd}{RESET}")
+            
+            sys.exit(1)
 
 
 if __name__ == '__main__':
