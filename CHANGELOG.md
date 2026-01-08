@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-01-08
+
+### Changed
+- **Unified namespace parameter**: Merged `-n` and `--namespaces` into single parameter
+  * `-n NAMESPACE` now accepts both single namespace and comma-separated list
+  * `--namespaces` remains as long-form alias
+  * Simpler, more intuitive interface
+  * Works seamlessly with both single-cluster and two-cluster modes
+  * Reduces confusion about which parameter to use
+
+### Documentation
+- Updated all examples to use unified `-n` parameter
+- Clarified parameter usage in help text
+- Updated README with simplified syntax examples
+
 ## [1.5.0] - 2026-01-08
 
 ### Added

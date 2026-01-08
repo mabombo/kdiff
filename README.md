@@ -98,10 +98,10 @@ kdiff -c CONTEXT --namespaces NS1,NS2[,NS3...] [OPTIONS]
 
 *Single-cluster mode:*
 - `-c CONTEXT` : Kubernetes context
-- `--namespaces NS1,NS2,...` : Comma-separated list of namespaces to compare (minimum 2)
+- `-n NS1,NS2,...` : Comma-separated list of namespaces to compare (minimum 2)
 
 **Optional:**
-- `-n NAMESPACE` : Single namespace to filter (two-cluster mode only)
+- `-n NAMESPACE(S)` : Single namespace or comma-separated list. For single-cluster mode, minimum 2 required. For two-cluster mode, optional (default: all namespaces)
 - `-r RESOURCES` : Comma-separated resource types to compare
 - `-o OUTPUT_DIR` : Output directory (default: ./kdiff_output/latest)
 - `-f FORMAT` : Output format: text (default) or json
@@ -137,16 +137,16 @@ kdiff -c1 prod -c2 staging --exclude-resources secret,configmap
 **Single-cluster namespace comparison:**
 ```bash
 # Compare resources between two namespaces in the same cluster
-kdiff -c prod-cluster --namespaces namespace1,namespace2
+kdiff -c prod-cluster -n namespace1,namespace2
 
 # Compare multiple namespaces (pairwise comparison)
-kdiff -c prod-cluster --namespaces ns1,ns2,ns3
+kdiff -c prod-cluster -n ns1,ns2,ns3
 
 # Compare only configmaps between namespaces
-kdiff -c prod-cluster --namespaces dev,staging,prod -r configmap
+kdiff -c prod-cluster -n dev,staging,prod -r configmap
 
 # Include metadata in namespace comparison
-kdiff -c prod-cluster --namespaces ns1,ns2 --show-metadata
+kdiff -c prod-cluster -n ns1,ns2 --show-metadata
 ```
 
 ## Output Structure
@@ -275,5 +275,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.5.0
+Current version: 1.5.1
 

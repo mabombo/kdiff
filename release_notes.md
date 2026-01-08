@@ -1,3 +1,34 @@
+# kdiff v1.5.1 - Unified Namespace Parameter
+
+## Improvements
+
+### Simplified Parameter Interface
+- **Unified `-n` parameter**: Now accepts both single namespace and comma-separated list
+  * Single namespace: `-n prod`
+  * Multiple namespaces: `-n ns1,ns2,ns3`
+  * Long form alias: `--namespaces` still available
+- **Clearer usage**: No more confusion between `-n` and `--namespaces`
+- **Same behavior, simpler syntax**: Works identically in both single-cluster and two-cluster modes
+
+### Updated Examples
+```bash
+# Single-cluster mode (was: --namespaces)
+kdiff -c prod-cluster -n ns1,ns2
+
+# Two-cluster mode - single namespace
+kdiff -c1 prod -c2 staging -n myapp
+
+# Two-cluster mode - multiple namespaces  
+kdiff -c1 prod -c2 staging -n ns1,ns2,ns3
+```
+
+### Documentation
+- All examples updated to use unified `-n` syntax
+- Help text clarified
+- README simplified with consistent parameter usage
+
+---
+
 # kdiff v1.5.0 - Single-Cluster Namespace Comparison
 
 ## Major Features

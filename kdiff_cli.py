@@ -240,10 +240,10 @@ Examples:
   kdiff -c1 prod-cluster -c2 staging-cluster -n my-namespace
 
   # Two-cluster mode: Compare multiple namespaces
-  kdiff -c1 prod-cluster -c2 staging-cluster --namespaces ns1,ns2,ns3
+  kdiff -c1 prod-cluster -c2 staging-cluster -n ns1,ns2,ns3
 
   # Single-cluster mode: Compare multiple namespaces in same cluster
-  kdiff -c prod-cluster --namespaces ns1,ns2,ns3
+  kdiff -c prod-cluster -n ns1,ns2,ns3
 
   # Compare only deployments and configmaps
   kdiff -c1 prod-cluster -c2 staging-cluster -r deployment,configmap -n my-namespace
@@ -287,13 +287,10 @@ Default resources compared:
                        metavar='RESOURCES',
                        help='Comma-separated list of resource types to compare (e.g., deployment,configmap,secret). If not specified, compares default resources. See examples below for details')
     
-    parser.add_argument('-n',
+    parser.add_argument('-n', '--namespaces',
+                       dest='namespaces',
                        metavar='NAMESPACE',
-                       help='Kubernetes namespace to filter resources (single namespace). If not specified, compares resources across all namespaces (--all-namespaces)')
-    
-    parser.add_argument('--namespaces',
-                       metavar='NS1,NS2,...',
-                       help='Comma-separated list of namespaces to compare. Use with -c for single-cluster mode or with -c1/-c2 for two-cluster mode')
+                       help='Namespace(s) to compare. Single namespace (e.g., -n prod) or comma-separated list (e.g., -n ns1,ns2,ns3). For single-cluster mode (-c), at least 2 namespaces required. If not specified in two-cluster mode, compares all namespaces')
     
     parser.add_argument('-o',
                        metavar='OUTPUT_DIR',
@@ -337,16 +334,12 @@ Default resources compared:
         print("Error: Cannot specify -c together with -c1 or -c2", file=sys.stderr)
         sys.exit(2)
     
-    if args.n and args.namespaces:
-        print("Error: Cannot specify both -n and --namespaces", file=sys.stderr)
-        sys.exit(2)
-    
     # Determine mode based on arguments
     if args.c:
         # Single-cluster mode
         single_cluster_mode = True
         if not args.namespaces:
-            print("Error: Single-cluster mode (-c) requires --namespaces with at least 2 namespaces", file=sys.stderr)
+            print("Error: Single-cluster mode (-c) requires -n with at least 2 namespaces", file=sys.stderr)
             sys.exit(2)
         namespaces_list = [ns.strip() for ns in args.namespaces.split(',') if ns.strip()]
         if len(namespaces_list) < 2:
@@ -470,8 +463,6 @@ Default resources compared:
         print(f"Cluster 2: {args.c2}")
         if namespaces_list:
             print(f"Namespaces: {', '.join(namespaces_list)}")
-        elif args.n:
-            print(f"Namespace: {args.n}")
         else:
             print(f"Namespaces: all")
         
@@ -481,7 +472,7 @@ Default resources compared:
         json_out = outdir / 'summary.json'
         
         # Determine which namespace(s) to fetch
-        ns_to_fetch = namespaces_list if namespaces_list else args.n
+        ns_to_fetch = namespaces_list
 
         print(f"Fetching resources from {args.c1}...")
         success1 = fetch_resources(args.c1, dir1, resources, ns_to_fetch, args.show_metadata)
