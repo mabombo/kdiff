@@ -2,12 +2,7 @@
 """
 Setup script for kdiff - Kubernetes Cluster Comparison Tool
 """
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup
-    # Fallback se setuptools non disponibile
-    def find_packages(**kwargs):
+from setuptools import setup, find_packages
         return ['lib']
 
 from pathlib import Path

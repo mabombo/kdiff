@@ -310,7 +310,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
             resource_path = c1_dir / resource_file
             if resource_path.exists():
                 # Carica risorsa per estrarre metadati
-                obj = json.load(open(resource_path))
+                with open(resource_path) as file:
+                    obj = json.load(file)
                 kind = obj.get('kind', 'Unknown')
                 name = obj.get('metadata', {}).get('name', 'unknown')
                 namespace = obj.get('metadata', {}).get('namespace', '-')
@@ -324,7 +325,7 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
                     'location': f'Only in {cluster1}',
                     'location_class': 'missing-in-c2'
                 })
-        except:
+        except Exception:
             # Ignora errori (file corrotto, JSON invalido, etc)
             pass
     
@@ -335,7 +336,8 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
         try:
             resource_path = c2_dir / resource_file
             if resource_path.exists():
-                obj = json.load(open(resource_path))
+                with open(resource_path) as file:
+                    obj = json.load(file)
                 kind = obj.get('kind', 'Unknown')
                 name = obj.get('metadata', {}).get('name', 'unknown')
                 namespace = obj.get('metadata', {}).get('namespace', '-')
@@ -349,7 +351,7 @@ def generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir
                     'location': f'Only in {cluster2}',
                     'location_class': 'missing-in-c1'
                 })
-        except:
+        except Exception:
             pass
     
     # Caso 2: errori lettura file (nessuna risorsa generata)
@@ -498,8 +500,9 @@ def main():
         # ----------------------------------------
         # 5.2 Caricamento Risorse JSON
         # ----------------------------------------
-        a = json.load(open(f1))  # Risorsa cluster1
-        b = json.load(open(f2))  # Risorsa cluster2
+        with open(f1) as file1, open(f2) as file2:
+            a = json.load(file1)  # Risorsa cluster1
+            b = json.load(file2)  # Risorsa cluster2
         
         # Estrai metadati per identificazione
         kind = a.get('kind', 'Unknown')
@@ -682,7 +685,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         try:
             f1 = c1_dir / base
             if f1.exists():
-                obj = json.load(open(f1))
+                with open(f1) as file:
+                    obj = json.load(file)
                 kind = obj.get('kind', 'Unknown')
                 name = obj.get('metadata', {}).get('name', 'unknown')
                 namespace = obj.get('metadata', {}).get('namespace', None)
@@ -690,7 +694,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 kind = 'Unknown'
                 name = 'unknown'
                 namespace = None
-        except:
+        except Exception:
             kind = 'Unknown'
             name = 'unknown'
             namespace = None
@@ -787,7 +791,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             if diff_file.exists():
                 try:
                     diff_content = diff_file.read_text(encoding='utf-8')
-                except:
+                except Exception:
                     diff_content = "Error reading diff file"
             else:
                 diff_content = "Diff file not found"
@@ -808,7 +812,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             if f1.exists():
                 try:
                     json1_content = f1.read_text(encoding='utf-8')
-                except:
+                except Exception:
                     json1_content = "Error reading file"
             else:
                 json1_content = "File not found"
@@ -816,7 +820,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             if f2.exists():
                 try:
                     json2_content = f2.read_text(encoding='utf-8')
-                except:
+                except Exception:
                     json2_content = "Error reading file"
             else:
                 json2_content = "File not found"
@@ -935,9 +939,6 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 </td>
             </tr>
         ''')
-    
-    # Calcola media modifiche per risorsa
-    avg_changes = total_paths / total_resources if total_resources > 0 else 0
     
     # ========================================
     # 4. ASSEMBLAGGIO HTML COMPLETO

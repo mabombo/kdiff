@@ -5,6 +5,9 @@ LABEL maintainer="Mauro Casiraghi"
 LABEL description="kdiff - Kubernetes cluster comparison tool"
 LABEL version="1.4.0"
 
+# Upgrade pip to latest version to fix security vulnerabilities
+RUN pip install --no-cache-dir --upgrade pip
+
 # Install kubectl and runtime dependencies
 # TARGETARCH is automatically set by buildx for multi-platform builds
 ARG TARGETARCH

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime
 import importlib.util
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock
 import sys
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 # Add bin to path to import kdiff functions
 ROOT = Path(__file__).parent.parent

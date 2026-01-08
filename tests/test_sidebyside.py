@@ -13,7 +13,6 @@ Tests verify that the HTML report includes:
 import unittest
 import sys
 import json
-import base64
 from pathlib import Path
 
 # Add parent directory to path
@@ -87,7 +86,7 @@ class TestSideBySideDiff(unittest.TestCase):
         
         for func_name in required_functions:
             self.assertIsInstance(func_name, str)
-            self.assertTrue(len(func_name) > 0)
+            self.assertGreater(len(func_name), 0)
     
     def test_css_classes_present(self):
         """Test that required CSS classes exist"""
@@ -109,10 +108,12 @@ class TestSideBySideDiff(unittest.TestCase):
         
         for class_name in required_classes:
             self.assertIsInstance(class_name, str)
-            self.assertTrue(len(class_name) > 0)
+            self.assertGreater(len(class_name), 0)
     
     def test_base64_encoding(self):
         """Test that JSON can be properly base64 encoded for embedding"""
+        import base64
+        
         test_json = {"test": "data", "nested": {"value": 123}}
         json_str = json.dumps(test_json)
         
@@ -121,7 +122,7 @@ class TestSideBySideDiff(unittest.TestCase):
         
         # Verify it's base64
         self.assertIsInstance(encoded, str)
-        self.assertTrue(len(encoded) > 0)
+        self.assertGreater(len(encoded), 0)
         
         # Decode and verify
         decoded = base64.b64decode(encoded).decode()

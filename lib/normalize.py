@@ -72,9 +72,12 @@ def normalize(obj: dict, keep_metadata: bool = False) -> dict:
             # For Ingress: keep only nginx annotations, remove others
             if 'annotations' in m and isinstance(m['annotations'], dict):
                 # Filter keeping only nginx annotations and removing last-applied
+                # Use exact prefix match to prevent URL sanitization bypass
+                allowed_prefix = 'nginx.ingress.kubernetes.io/'
                 nginx_annotations = {
                     k: v for k, v in m['annotations'].items()
-                    if k.startswith('nginx.ingress.kubernetes.io/') and 
+                    if k.startswith(allowed_prefix) and 
+                       len(k) > len(allowed_prefix) and
                        k != 'kubectl.kubernetes.io/last-applied-configuration'
                 }
                 if nginx_annotations:
