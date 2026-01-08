@@ -18,6 +18,10 @@ env:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
 
     steps:
       - name: Checkout codice
@@ -72,7 +76,7 @@ jobs:
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:test
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-results.sarif'4
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results to GitHub Security
