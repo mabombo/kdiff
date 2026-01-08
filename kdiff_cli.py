@@ -103,7 +103,7 @@ def load_normalize_func():
     return getattr(mod, 'normalize')
 
 
-def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | str | None, show_metadata: bool = False):
+def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | str | None, show_metadata: bool = False, single_cluster_mode: bool = False):
     """
     Fetch resources from a Kubernetes cluster.
     
@@ -113,6 +113,7 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
         resources: List of resource types to fetch
         namespaces: None (all namespaces), string (single namespace), or list (specific namespaces)
         show_metadata: Whether to keep metadata in normalized output
+        single_cluster_mode: If True, exclude namespace from filename (for namespace comparison within same cluster)
     """
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
@@ -200,7 +201,11 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
             for item in items:
                 name = item.get('metadata', {}).get('name')
                 item_ns = item.get('metadata', {}).get('namespace')
-                if item_ns:
+                # In single-cluster mode (namespace comparison), exclude namespace from filename
+                # so that the same resource in different namespaces can be matched and compared
+                if single_cluster_mode:
+                    fname = f"{kind}__{name}.json"
+                elif item_ns:
                     fname = f"{kind}__{item_ns}__{name}.json"
                 else:
                     fname = f"{kind}__{name}.json"
@@ -416,16 +421,20 @@ Default resources compared:
             print(f"Comparing: {ns1} vs {ns2}")
             print(f"{'='*60}")
             
-            dir1 = outdir / f"{args.c}_{ns1}"
-            dir2 = outdir / f"{args.c}_{ns2}"
-            diffs = outdir / f'diffs_{ns1}_vs_{ns2}'
-            json_out = outdir / f'summary_{ns1}_vs_{ns2}.json'
+            # Create separate directory for this comparison
+            comparison_dir = outdir / f"{ns1}_vs_{ns2}"
+            comparison_dir.mkdir(parents=True, exist_ok=True)
+            
+            dir1 = comparison_dir / f"{args.c}_{ns1}"
+            dir2 = comparison_dir / f"{args.c}_{ns2}"
+            diffs = comparison_dir / 'diffs'
+            json_out = comparison_dir / 'summary.json'
             
             print(f"Fetching resources from {args.c}/{ns1}...")
-            success1 = fetch_resources(args.c, dir1, resources, ns1, args.show_metadata)
+            success1 = fetch_resources(args.c, dir1, resources, ns1, args.show_metadata, single_cluster_mode=True)
             
             print(f"Fetching resources from {args.c}/{ns2}...")
-            success2 = fetch_resources(args.c, dir2, resources, ns2, args.show_metadata)
+            success2 = fetch_resources(args.c, dir2, resources, ns2, args.show_metadata, single_cluster_mode=True)
             
             all_successes.append((success1, success2))
             
@@ -443,9 +452,10 @@ Default resources compared:
             rc = subprocess.run(['python3', str(LIB / 'compare.py'), str(dir1), str(dir2), str(diffs), '--json-out', str(json_out)]).returncode
             
             # Generate HTML report for this comparison
-            subprocess.run(['python3', str(LIB / 'diff_details.py'), str(outdir), 
-                          '--cluster1', f"{args.c}/{ns1}", '--cluster2', f"{args.c}/{ns2}",
-                          '--output-suffix', f"_{ns1}_vs_{ns2}"])
+            # Pass the actual directory names and full cluster/namespace for display
+            subprocess.run(['python3', str(LIB / 'diff_details.py'), str(comparison_dir), 
+                          '--cluster1', dir1.name, '--cluster2', dir2.name,
+                          '--cluster1-label', f"{args.c}/{ns1}", '--cluster2-label', f"{args.c}/{ns2}"])
         
         # Generate summary report for all comparisons
         print(f"\n{'='*60}")

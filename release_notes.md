@@ -1,3 +1,87 @@
+# kdiff v1.5.0 - Single-Cluster Namespace Comparison
+
+## Major Features
+
+### Single-Cluster Multi-Namespace Comparison
+- **New comparison mode**: Compare resources across multiple namespaces within the same cluster
+- **Pairwise comparison**: Automatically generates comparisons for all namespace pairs
+- **Intelligent filename matching**: Resources matched by kind+name, namespace excluded from matching logic
+- **Separate comparison directories**: Each namespace pair gets its own subdirectory with complete reports
+- **Dual-mode support**: Maintains full backward compatibility with two-cluster comparison mode
+
+#### Usage Examples
+```bash
+# Compare two namespaces in the same cluster
+kdiff -c prod-cluster --namespaces ns1,ns2
+
+# Compare three namespaces (generates 3 pairwise comparisons: ns1 vs ns2, ns1 vs ns3, ns2 vs ns3)
+kdiff -c prod-cluster --namespaces dev,staging,prod
+
+# Single-cluster comparison with specific resources
+kdiff -c prod-cluster --namespaces ns1,ns2 -r configmap,deployment
+
+# Include services and ingress
+kdiff -c prod-cluster --namespaces ns1,ns2 --include-services-ingress
+```
+
+### Enhanced Report Generation
+- **Context-aware labels**: Reports automatically detect namespace vs cluster comparison
+- **Dynamic UI text**: "Namespace 1/2" instead of "Cluster 1/2" in single-cluster mode
+- **Proper resource paths**: Separate directory names from display labels for accurate file reading
+- **Organized output structure**: Each comparison in its own subdirectory (e.g., `ns1_vs_ns2/`)
+
+### Output Structure
+**Single-cluster mode:**
+```
+kdiff_output/
+└── latest/
+    ├── ns1_vs_ns2/              # Comparison between ns1 and ns2
+    │   ├── summary.json
+    │   ├── diff-details.html
+    │   ├── diff-details.json
+    │   ├── diffs/
+    │   ├── CLUSTER_ns1/
+    │   └── CLUSTER_ns2/
+    └── ns1_vs_ns3/              # Comparison between ns1 and ns3
+```
+
+## Enhancements
+
+### CLI Improvements
+- Added `-c CONTEXT` option for single-cluster mode
+- Extended `--namespaces` to work with both modes (single-cluster and two-cluster)
+- Enhanced help text with examples for both comparison modes
+- Improved argument validation with clear error messages
+
+### Testing
+- **6 new test cases** covering:
+  * Single-cluster filename logic (namespace exclusion)
+  * Two-cluster filename logic (namespace inclusion)
+  * Pairwise comparison generation
+  * Argument validation for both modes
+- Total test suite: **39 tests** - all passing
+
+### Documentation
+- Updated README.md with single-cluster mode documentation
+- Added comprehensive examples for both comparison modes
+- Documented output structure for both modes
+- Updated CLI help text with mode-specific examples
+
+## Technical Details
+
+### Comparison Logic
+- **Two-cluster mode**: Resources identified by `kind__namespace__name` (namespace part of identity)
+- **Single-cluster mode**: Resources identified by `kind__name` (namespace ignored for matching)
+- **Smart matching**: Same resource in different namespaces correctly detected as "different" not "missing"
+
+### Backward Compatibility
+- ✅ All existing two-cluster functionality preserved
+- ✅ Existing scripts and workflows continue to work
+- ✅ No breaking changes to command-line interface
+- ✅ Maintains same output format for two-cluster mode
+
+---
+
 # kdiff v1.4.0 - Custom Resources & Multiple Namespaces
 
 ## New Features

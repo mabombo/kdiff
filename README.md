@@ -4,7 +4,7 @@
 
 # kdiff - Kubernetes Resource Comparison Tool
 
-kdiff is a Python tool for comparing Kubernetes configurations between two clusters or contexts. It identifies missing, different, or cluster-specific resources and generates interactive HTML reports with detailed diff visualization.
+kdiff is a Python tool for comparing Kubernetes configurations between two clusters or across multiple namespaces within the same cluster. It identifies missing, different, or cluster-specific resources and generates interactive HTML reports with detailed diff visualization.
 
 ## Features
 
@@ -78,18 +78,30 @@ docker run --rm \
 
 ### Basic Syntax
 
+**Two-cluster comparison:**
 ```bash
 kdiff -c1 CONTEXT1 -c2 CONTEXT2 [OPTIONS]
 ```
 
+**Single-cluster namespace comparison:**
+```bash
+kdiff -c CONTEXT --namespaces NS1,NS2[,NS3...] [OPTIONS]
+```
+
 ### Parameters
 
-**Required:**
+**Required (choose one mode):**
+
+*Two-cluster mode:*
 - `-c1 CONTEXT1` : First Kubernetes context
 - `-c2 CONTEXT2` : Second Kubernetes context
 
+*Single-cluster mode:*
+- `-c CONTEXT` : Kubernetes context
+- `--namespaces NS1,NS2,...` : Comma-separated list of namespaces to compare (minimum 2)
+
 **Optional:**
-- `-n NAMESPACE` : Namespace to filter (default: all namespaces)
+- `-n NAMESPACE` : Single namespace to filter (two-cluster mode only)
 - `-r RESOURCES` : Comma-separated resource types to compare
 - `-o OUTPUT_DIR` : Output directory (default: ./kdiff_output/latest)
 - `-f FORMAT` : Output format: text (default) or json
@@ -101,9 +113,13 @@ kdiff -c1 CONTEXT1 -c2 CONTEXT2 [OPTIONS]
 
 ### Examples
 
+**Two-cluster comparison:**
 ```bash
-# Compare all resources in a namespace
+# Compare all resources in a namespace between two clusters
 kdiff -c1 prod-cluster -c2 staging-cluster -n myapp
+
+# Compare multiple namespaces between two clusters
+kdiff -c1 prod-cluster -c2 staging-cluster --namespaces ns1,ns2,ns3
 
 # Compare only specific resource types
 kdiff -c1 prod -c2 dev -r deployment,configmap -n myapp
@@ -118,8 +134,24 @@ kdiff -c1 prod -c2 staging --show-metadata
 kdiff -c1 prod -c2 staging --exclude-resources secret,configmap
 ```
 
+**Single-cluster namespace comparison:**
+```bash
+# Compare resources between two namespaces in the same cluster
+kdiff -c prod-cluster --namespaces namespace1,namespace2
+
+# Compare multiple namespaces (pairwise comparison)
+kdiff -c prod-cluster --namespaces ns1,ns2,ns3
+
+# Compare only configmaps between namespaces
+kdiff -c prod-cluster --namespaces dev,staging,prod -r configmap
+
+# Include metadata in namespace comparison
+kdiff -c prod-cluster --namespaces ns1,ns2 --show-metadata
+```
+
 ## Output Structure
 
+**Two-cluster mode:**
 ```
 kdiff_output/
 └── latest/
@@ -129,6 +161,21 @@ kdiff_output/
     ├── diffs/                    # Individual diff files
     ├── <CONTEXT1>/              # Normalized resources from context 1
     └── <CONTEXT2>/              # Normalized resources from context 2
+```
+
+**Single-cluster namespace comparison:**
+```
+kdiff_output/
+└── latest/
+    ├── ns1_vs_ns2/              # Comparison between ns1 and ns2
+    │   ├── summary.json         # Comparison summary
+    │   ├── diff-details.html    # HTML report for this pair
+    │   ├── diff-details.json    # Detailed diff data
+    │   ├── diffs/               # Individual diff files
+    │   ├── <CONTEXT>_ns1/       # Resources from namespace 1
+    │   └── <CONTEXT>_ns2/       # Resources from namespace 2
+    ├── ns1_vs_ns3/              # Comparison between ns1 and ns3
+    └── ns2_vs_ns3/              # Comparison between ns2 and ns3
 ```
 
 The `latest/` directory is automatically cleaned on each execution.
@@ -228,5 +275,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.4.0
+Current version: 1.5.0
 

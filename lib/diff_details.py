@@ -434,21 +434,21 @@ def main():
     # ========================================
     p = argparse.ArgumentParser()
     p.add_argument("outdir", help="Output directory where summary.json and cluster directories exist")
-    p.add_argument('--cluster1', default='cluster1')
-    p.add_argument('--cluster2', default='cluster2')
-    p.add_argument('--output-suffix', default='', help='Suffix to add to output filenames (e.g., _ns1_vs_ns2)')
+    p.add_argument('--cluster1', default='cluster1', help='Directory name for cluster1 resources')
+    p.add_argument('--cluster2', default='cluster2', help='Directory name for cluster2 resources')
+    p.add_argument('--cluster1-label', default=None, help='Display label for cluster1 (defaults to --cluster1)')
+    p.add_argument('--cluster2-label', default=None, help='Display label for cluster2 (defaults to --cluster2)')
     args = p.parse_args()
+    
+    # Use labels if provided, otherwise use directory names
+    cluster1_label = args.cluster1_label if args.cluster1_label else args.cluster1
+    cluster2_label = args.cluster2_label if args.cluster2_label else args.cluster2
     
     # ========================================
     # 2. VALIDAZIONE FILE INPUT
     # ========================================
     outdir = Path(args.outdir)
-    
-    # Use suffix for input files if provided
-    if args.output_suffix:
-        summary_file = outdir / f"summary{args.output_suffix}.json"
-    else:
-        summary_file = outdir / "summary.json"
+    summary_file = outdir / "summary.json"
     
     if not summary_file.exists():
         print(f"Summary not found: {summary_file}", file=sys.stderr)
@@ -461,6 +461,9 @@ def main():
     # Directory contenenti risorse normalizzate dei due cluster
     c1_dir = outdir / args.cluster1
     c2_dir = outdir / args.cluster2
+    
+    # Diffs directory
+    diffs_dir = outdir / 'diffs'
 
     # ========================================
     # 3. INIZIALIZZAZIONE OUTPUT MARKDOWN
@@ -602,14 +605,6 @@ def main():
     # 7. SCRITTURA FILE OUTPUT
     # ========================================
     
-    # Determine output filenames based on suffix
-    if args.output_suffix:
-        json_filename = f"diff-details{args.output_suffix}.json"
-        html_filename = f"diff-details{args.output_suffix}.html"
-    else:
-        json_filename = "diff-details.json"
-        html_filename = "diff-details.html"
-    
     # 7.2 Salva JSON Report (strutturato per integrazione)
     json_output = {
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -618,7 +613,7 @@ def main():
         "total_resources": total_resources,
         "total_paths": total_paths
     }
-    (outdir / json_filename).write_text(
+    (outdir / "diff-details.json").write_text(
         json.dumps(json_output, indent=2, ensure_ascii=False),
         encoding="utf-8"
     )
@@ -627,13 +622,13 @@ def main():
     generate_html_report(
         outdir, summary, details, counts_top,
         total_resources, total_paths,
-        args.cluster1, args.cluster2,
+        cluster1_label, cluster2_label,
         c1_dir, c2_dir,
-        html_filename  # Pass the filename to the function
+        diffs_dir
     )
     
-    # Print success message with actual filename
-    print(f"Wrote detailed diff report: {outdir / html_filename}")
+    # Print success message
+    print(f"Wrote detailed diff report: {outdir / 'diff-details.html'}")
 
 
 
@@ -642,7 +637,7 @@ def main():
 # HTML REPORT GENERATOR - Report Interattivo
 # ============================================
 
-def generate_html_report(outdir, summary, details, counts_top, total_resources, total_paths, cluster1, cluster2, c1_dir, c2_dir, html_filename="diff-details.html"):
+def generate_html_report(outdir, summary, details, counts_top, total_resources, total_paths, cluster1, cluster2, c1_dir, c2_dir, diffs_dir):
     """
     Genera report HTML interattivo con CSS/JavaScript avanzato.
     
@@ -657,7 +652,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         cluster2: Name secondo cluster
         c1_dir: Path directory cluster1
         c2_dir: Path directory cluster2
-        html_filename: Nome del file HTML da generare
+        diffs_dir: Path directory diffs
     
     Output:
         - diff-details.html: Report HTML interattivo con:
@@ -673,12 +668,23 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     
     Features interattive:
         - Collapse/expand sezioni
-        - View Diff modal con zoom +/-
-        - Badge colorati per Kind
-        - Legenda interattiva
-        - Statistiche aggregate
-        - Risorse solo in un cluster (missing table)
     """
+    
+    # Determine comparison context (cluster vs namespace)
+    # If cluster names contain "/" it's namespace comparison (e.g., "cluster/namespace")
+    is_namespace_comparison = "/" in cluster1 or "/" in cluster2
+    
+    if is_namespace_comparison:
+        comparison_type = "namespace"
+        comparison_type_capitalized = "Namespace"
+        entity1_label = cluster1.split("/")[-1] if "/" in cluster1 else cluster1
+        entity2_label = cluster2.split("/")[-1] if "/" in cluster2 else cluster2
+    else:
+        comparison_type = "cluster"
+        comparison_type_capitalized = "Cluster"
+        entity1_label = cluster1
+        entity2_label = cluster2
+    
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     
     # ========================================
@@ -799,7 +805,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             # ----------------------------------------
             # 2.3 Carica contenuto diff file per modal
             # ----------------------------------------
-            diff_file = outdir / 'diffs' / f"{base}.diff"
+            diff_file = diffs_dir / f"{base}.diff"
             diff_content = ""
             
             if diff_file.exists():
@@ -2895,7 +2901,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         // MISSING RESOURCES - Toggle Tabella
         // ========================================
         
-        // Mostra/nascondi sezione risorse presenti solo in un cluster
+        // Mostra/nascondi sezione risorse presenti solo in un {comparison_type}
         function toggleMissingResources() {{
             const section = document.getElementById('missingResourcesSection');
             section.classList.toggle('visible');
@@ -2912,10 +2918,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
                 <div class="metadata-item">
-                    <strong>Cluster 1:</strong> {cluster1}
+                    <strong>{comparison_type_capitalized} 1:</strong> {entity1_label}
                 </div>
                 <div class="metadata-item">
-                    <strong>Cluster 2:</strong> {cluster2}
+                    <strong>{comparison_type_capitalized} 2:</strong> {entity2_label}
                 </div>
                 <div class="metadata-item">
                     <strong>Generated:</strong> {timestamp}
@@ -2933,14 +2939,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 <div class="stat-value">{total_paths}</div>
             </div>
             <div class="stat-card missing" onclick="toggleMissingResources()" title="Click to view details">
-                <div class="stat-label">Resources Only in One Cluster</div>
+                <div class="stat-label">Resources Only in One {comparison_type_capitalized}</div>
                 <div class="stat-value">{summary['counts']['missing_in_1'] + summary['counts']['missing_in_2']}</div>
                 <div class="stat-hint">Click to view details</div>
             </div>
         </div>
         
         <div id="missingResourcesSection" class="missing-resources-section">
-            <h3 style="margin-bottom: 20px; color: #111827; font-size: 1.5em;">Resources Present in Only One Cluster</h3>
+            <h3 style="margin-bottom: 20px; color: #111827; font-size: 1.5em;">Resources Present in Only One {comparison_type_capitalized}</h3>
             {generate_missing_resources_table(summary, cluster1, cluster2, c1_dir, c2_dir)}
         </div>
         
@@ -3062,7 +3068,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
 </body>
 </html>'''
     
-    (outdir / html_filename).write_text(html_content, encoding="utf-8")
+    (outdir / "diff-details.html").write_text(html_content, encoding="utf-8")
 
 
 if __name__ == "__main__":

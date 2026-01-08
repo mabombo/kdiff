@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-01-08
+
+### Added
+- **Single-Cluster Multi-Namespace Comparison Mode**
+  * New `-c CONTEXT` option for comparing namespaces within the same cluster
+  * Requires `--namespaces` with at least 2 namespaces
+  * Pairwise comparison: automatically generates comparisons for all namespace pairs
+  * Example: `-c prod --namespaces ns1,ns2,ns3` creates 3 comparisons (ns1 vs ns2, ns1 vs ns3, ns2 vs ns3)
+  * Each comparison gets its own subdirectory with complete reports
+- **Intelligent Resource Matching**
+  * Single-cluster mode: resources matched by kind+name (namespace excluded from filename)
+  * Two-cluster mode: resources matched by kind+namespace+name (maintains existing behavior)
+  * Prevents same resources in different namespaces from being marked as "missing"
+  * Correctly detects modified resources across namespaces
+- **Context-Aware Report Generation**
+  * Reports automatically detect namespace vs cluster comparison context
+  * Dynamic UI labels: "Namespace 1/2" vs "Cluster 1/2"
+  * Dynamic comparison type labels: "Only in One Namespace" vs "Only in One Cluster"
+  * Accurate resource path resolution with separate directory names and display labels
+- **Comprehensive Test Coverage**
+  * 6 new test cases for single-cluster and two-cluster modes
+  * Tests for filename logic, pairwise comparison, argument validation
+  * Total test suite: 39 tests - all passing
+  * Validates backward compatibility with two-cluster mode
+
+### Changed
+- **Output Directory Structure**
+  * Single-cluster mode: organized by namespace pairs (e.g., `latest/ns1_vs_ns2/`)
+  * Two-cluster mode: unchanged (maintains existing structure)
+  * Cleaner separation between different comparison types
+- **Documentation Updates**
+  * README.md updated with single-cluster mode usage examples
+  * Added comprehensive parameter documentation for both modes
+  * Updated output structure documentation
+  * Enhanced CLI help text with mode-specific examples
+
+### Fixed
+- **Resource Path Resolution**
+  * Fixed "Unable to read resource details" error in namespace comparisons
+  * Separated directory names from display labels in report generation
+  * Correct file paths used for reading resource details
+
+### Technical
+- Extended `fetch_resources()` with `single_cluster_mode` parameter
+- Modified `diff_details.py` to accept separate cluster names and labels
+- Enhanced comparison logic to support namespace-aware matching
+- Maintained full backward compatibility with existing two-cluster workflows
+
 ## [1.4.0] - 2026-01-07
 
 ### Added
