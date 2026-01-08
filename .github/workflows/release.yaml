@@ -59,10 +59,14 @@ jobs:
           cat > release_notes.md << 'EOF'
           ## Docker Images
           
-          Multi-platform images available on Docker Hub:
+          Multi-platform images available:
           
           ```bash
+          # Docker Hub
           docker pull mabombo/kdiff:${{ steps.version.outputs.version }}
+          
+          # GitHub Container Registry
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
           ```
           
           Supported platforms:
@@ -70,6 +74,8 @@ jobs:
           - linux/arm64
           
           Docker Hub: https://hub.docker.com/r/mabombo/kdiff
+          
+          GitHub Packages: https://github.com/${{ github.repository }}/pkgs/container/kdiff
           EOF
 
       - name: Create GitHub Release
