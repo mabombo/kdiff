@@ -3,8 +3,6 @@
 Setup script for kdiff - Kubernetes Cluster Comparison Tool
 """
 from setuptools import setup, find_packages
-        return ['lib']
-
 from pathlib import Path
 
 # Leggi README per long_description
