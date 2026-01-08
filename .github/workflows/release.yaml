@@ -1,0 +1,137 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          # Extract changelog section for this version
+          if [ -f "CHANGELOG.md" ]; then
+            # Get content between this version header and next version header or end
+            CONTENT=$(awk "/## \[$VERSION\]/,/## \[|EOF/" CHANGELOG.md | sed '1d;$d' || echo "")
+            
+            if [ -z "$CONTENT" ]; then
+              CONTENT="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+            fi
+          else
+            CONTENT="Release version $VERSION"
+          fi
+          
+          # Save to output (escape for JSON)
+          {
+            echo 'notes<<EOF'
+            echo "$CONTENT"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          TAG=${{ steps.version.outputs.tag }}
+          
+          cat > release_notes.md << 'EOF'
+          ## 🚀 kdiff ${{ steps.version.outputs.version }}
+          
+          ### 📦 Docker Images
+          
+          Multi-platform images are available on Docker Hub:
+          
+          ```bash
+          # Pull the specific version
+          docker pull mabombo/kdiff:${{ steps.version.outputs.version }}
+          
+          # Or use latest
+          docker pull mabombo/kdiff:latest
+          ```
+          
+          **Supported platforms:**
+          - `linux/amd64` (Intel/AMD 64-bit)
+          - `linux/arm64` (ARM 64-bit / Apple Silicon)
+          
+          **Docker Hub:** https://hub.docker.com/r/mabombo/kdiff
+          
+          ### 📝 Changes
+          
+          ${{ steps.changelog.outputs.notes }}
+          
+          ### 🔧 Installation
+          
+          **Using Docker (recommended):**
+          ```bash
+          docker run --rm -it \
+            -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+            -v $(pwd)/kdiff_output:/app/kdiff_output \
+            mabombo/kdiff:${{ steps.version.outputs.version }} \
+            -c1 cluster1 -c2 cluster2 -n namespace
+          ```
+          
+          **Using pip:**
+          ```bash
+          pip install kdiff==${{ steps.version.outputs.version }}
+          ```
+          
+          **From source:**
+          ```bash
+          git clone https://github.com/${{ github.repository }}.git
+          cd kdiff
+          git checkout ${{ steps.version.outputs.tag }}
+          pip install -e .
+          ```
+          
+          ### 📚 Documentation
+          
+          - [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          - [Docker Guide](https://github.com/${{ github.repository }}/blob/main/DOCKER_README.md)
+          - [Installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
+          
+          ---
+          
+          **Full Changelog:** https://github.com/${{ github.repository }}/compare/v1.3.0...${{ steps.version.outputs.tag }}
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          files: |
+            README.md
+            DOCKER_README.md
+            LICENSE
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify release created
+        run: |
+          echo "✅ Release ${{ steps.version.outputs.tag }} created successfully!"
+          echo "🔗 View at: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
+          echo "🐳 Docker: docker pull mabombo/kdiff:${{ steps.version.outputs.version }}"
