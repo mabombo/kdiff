@@ -57,63 +57,19 @@ jobs:
           TAG=${{ steps.version.outputs.tag }}
           
           cat > release_notes.md << 'EOF'
-          ## 🚀 kdiff ${{ steps.version.outputs.version }}
+          ## Docker Images
           
-          ### 📦 Docker Images
-          
-          Multi-platform images are available on Docker Hub:
+          Multi-platform images available on Docker Hub:
           
           ```bash
-          # Pull the specific version
           docker pull mabombo/kdiff:${{ steps.version.outputs.version }}
-          
-          # Or use latest
-          docker pull mabombo/kdiff:latest
           ```
           
-          **Supported platforms:**
-          - `linux/amd64` (Intel/AMD 64-bit)
-          - `linux/arm64` (ARM 64-bit / Apple Silicon)
+          Supported platforms:
+          - linux/amd64
+          - linux/arm64
           
-          **Docker Hub:** https://hub.docker.com/r/mabombo/kdiff
-          
-          ### 📝 Changes
-          
-          ${{ steps.changelog.outputs.notes }}
-          
-          ### 🔧 Installation
-          
-          **Using Docker (recommended):**
-          ```bash
-          docker run --rm -it \
-            -v ~/.kube/config:/home/kdiff/.kube/config:ro \
-            -v $(pwd)/kdiff_output:/app/kdiff_output \
-            mabombo/kdiff:${{ steps.version.outputs.version }} \
-            -c1 cluster1 -c2 cluster2 -n namespace
-          ```
-          
-          **Using pip:**
-          ```bash
-          pip install kdiff==${{ steps.version.outputs.version }}
-          ```
-          
-          **From source:**
-          ```bash
-          git clone https://github.com/${{ github.repository }}.git
-          cd kdiff
-          git checkout ${{ steps.version.outputs.tag }}
-          pip install -e .
-          ```
-          
-          ### 📚 Documentation
-          
-          - [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
-          - [Docker Guide](https://github.com/${{ github.repository }}/blob/main/DOCKER_README.md)
-          - [Installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
-          
-          ---
-          
-          **Full Changelog:** https://github.com/${{ github.repository }}/compare/v1.3.0...${{ steps.version.outputs.tag }}
+          Docker Hub: https://hub.docker.com/r/mabombo/kdiff
           EOF
 
       - name: Create GitHub Release
