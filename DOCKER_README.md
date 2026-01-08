@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="images/kdiff_logo_3.png" alt="kdiff logo" width="300"/>
+</div>
+
 # kdiff - Docker Guide
 
 Compare Kubernetes resources between clusters using Docker.

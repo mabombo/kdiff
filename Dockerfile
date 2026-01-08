@@ -3,14 +3,16 @@ FROM python:3.12-alpine
 
 LABEL maintainer="Mauro Casiraghi"
 LABEL description="kdiff - Kubernetes cluster comparison tool"
-LABEL version="1.0.0"
+LABEL version="1.4.0"
 
 # Install kubectl and runtime dependencies
+# TARGETARCH is automatically set by buildx for multi-platform builds
+ARG TARGETARCH
 RUN apk add --no-cache \
     curl \
     ca-certificates \
     bash \
-    && curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/ \
     && kubectl version --client
