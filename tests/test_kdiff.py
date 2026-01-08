@@ -10,6 +10,7 @@ import tempfile
 import shutil
 from pathlib import Path
 import sys
+import os
 
 # Add lib to path
 ROOT = Path(__file__).parent.parent
