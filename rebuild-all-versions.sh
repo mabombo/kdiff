@@ -121,4 +121,4 @@ done
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-success "Done! 🎉"
+success "Done!"
