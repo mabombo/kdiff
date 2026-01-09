@@ -1,7 +1,8 @@
 /kdiff_output/
 *.log
 *.diff
-
+# ToDo List
+ToDo.txt
 # Internal documentation
 README_IT.md
 DOCKER_HUB_GUIDE.md
