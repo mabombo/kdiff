@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-01-09
+
+### Added
+- **Context validation**: Validates that specified Kubernetes contexts exist before attempting to fetch resources
+  * Checks contexts using `kubectl config get-contexts`
+  * Displays clear error message if context doesn't exist
+  * Lists all available contexts to help user choose correct one
+  * Provides suggestion to run `kubectl config get-contexts`
+  * Prevents wasted time attempting to connect to non-existent clusters
+  * Exit code 2 for invalid contexts (distinguishable from comparison differences)
+
+### Fixed
+- **Docker permission issues on Linux**: Added comprehensive troubleshooting section in DOCKER_README.md
+  * Solution 1: Adjust kubeconfig file permissions to 644
+  * Solution 2: Use temporary copy with appropriate permissions
+  * Solution 3: Run container as current user (--user flag)
+  * Documented why permission issues occur on Linux
+  * Clear step-by-step solutions for each approach
+
+### Documentation
+- Enhanced DOCKER_README.md with troubleshooting section
+- Added examples for handling permission issues on Linux
+- Added examples for context validation errors
+- Improved error messages for better user experience
+
+### Testing
+- Added 6 new tests for context validation
+- All tests pass: invalid contexts rejected, valid contexts accepted
+- Error messages and suggestions verified
+
 ## [1.5.1] - 2026-01-08
 
 ### Changed

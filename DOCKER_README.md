@@ -152,6 +152,77 @@ docker run --rm -it \
 - Kubernetes clusters with configured contexts in kubeconfig
 - kubectl contexts must be accessible from the container
 
+## Troubleshooting
+
+### Permission Issues on Linux
+
+On Linux systems, you may encounter permission errors when mounting the kubeconfig file. This happens because the container runs as user `kdiff` (uid 1000) and may not have read access to your kubeconfig.
+
+**Solution 1: Adjust file permissions (Recommended)**
+```bash
+# Ensure your kubeconfig is readable by the container user
+chmod 644 ~/.kube/config
+
+# Then run kdiff normally
+docker run --rm -it \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+**Solution 2: Use a temporary copy**
+```bash
+# Create a temporary copy with appropriate permissions
+cp ~/.kube/config /tmp/kube-config-kdiff
+chmod 644 /tmp/kube-config-kdiff
+
+# Mount the temporary file
+docker run --rm -it \
+  -v /tmp/kube-config-kdiff:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+
+# Clean up after use
+rm /tmp/kube-config-kdiff
+```
+
+**Solution 3: Run as current user (Last resort)**
+```bash
+# Run container as your user (bypasses permission issues but less secure)
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+### Invalid Context Errors
+
+If you see errors about contexts not existing:
+```
+[ERROR] CRITICAL ERROR: Context 'my-cluster' does not exist
+```
+
+**Solution:**
+1. Verify available contexts:
+   ```bash
+   kubectl config get-contexts
+   ```
+
+2. Use the exact context name from the list:
+   ```bash
+   docker run --rm -it \
+     -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+     -v $(pwd)/kdiff_output:/app/kdiff_output \
+     mabombo/kdiff:latest \
+     -c1 CORRECT-CONTEXT-NAME -c2 OTHER-CONTEXT -n myapp
+   ```
+
+3. Ensure your kubeconfig contains all required contexts and is properly mounted
+
 ## Security
 
 - Image runs as non-root user (uid 1000, gid 1000)

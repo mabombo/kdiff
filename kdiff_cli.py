@@ -41,6 +41,29 @@ def check_deps():
         sys.exit(2)
 
 
+def get_available_contexts():
+    """Get list of available kubectl contexts."""
+    try:
+        proc = subprocess.run(['kubectl', 'config', 'get-contexts', '-o', 'name'], 
+                            capture_output=True, text=True, check=True)
+        contexts = [line.strip() for line in proc.stdout.strip().split('\n') if line.strip()]
+        return contexts
+    except subprocess.CalledProcessError:
+        return []
+
+
+def validate_context(context: str, available_contexts: list[str]) -> bool:
+    """Validate that a context exists in the available contexts."""
+    if context not in available_contexts:
+        print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Context '{context}' does not exist", file=sys.stderr)
+        print(f"\n{YELLOW}Available contexts:{RESET}", file=sys.stderr)
+        for ctx in available_contexts:
+            print(f"  - {ctx}", file=sys.stderr)
+        print(f"\n{YELLOW}Suggestion:{RESET} Use 'kubectl config get-contexts' to see all available contexts", file=sys.stderr)
+        return False
+    return True
+
+
 def cleanup_output_dir(outdir: Path):
     """Clean output directory if it already exists."""
     if outdir.exists():
@@ -355,6 +378,28 @@ Default resources compared:
         sys.exit(2)
     else:
         print("Error: Must specify either -c (single-cluster mode) or -c1 and -c2 (two-cluster mode)", file=sys.stderr)
+        sys.exit(2)
+
+    # Validate contexts exist before proceeding
+    print("Validating Kubernetes contexts...")
+    available_contexts = get_available_contexts()
+    if not available_contexts:
+        print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Unable to retrieve available contexts", file=sys.stderr)
+        print(f"{YELLOW}Suggestion:{RESET} Check kubectl configuration with 'kubectl config get-contexts'", file=sys.stderr)
+        sys.exit(2)
+    
+    # Validate contexts based on mode
+    contexts_valid = True
+    if single_cluster_mode:
+        if not validate_context(args.c, available_contexts):
+            contexts_valid = False
+    else:
+        if not validate_context(args.c1, available_contexts):
+            contexts_valid = False
+        if not validate_context(args.c2, available_contexts):
+            contexts_valid = False
+    
+    if not contexts_valid:
         sys.exit(2)
 
     resources = RESOURCES.copy()

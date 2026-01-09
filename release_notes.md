@@ -1,3 +1,69 @@
+# kdiff v1.5.2 - Context Validation & Docker Fixes
+
+## New Features
+
+### Context Validation
+- **Early validation**: Checks that specified Kubernetes contexts exist before starting
+- **Clear error messages**: Shows exactly which context is invalid
+- **Helpful output**: Lists all available contexts when validation fails
+- **Time saver**: Prevents wasted time attempting to connect to non-existent clusters
+
+#### Example Error Output
+```
+[ERROR] CRITICAL ERROR: Context 'my-typo-cluster' does not exist
+
+Available contexts:
+  - prod-cluster
+  - staging-cluster
+  - dev-cluster
+
+Suggestion: Use 'kubectl config get-contexts' to see all available contexts
+```
+
+## Bug Fixes
+
+### Docker Permission Issues on Linux
+Added comprehensive troubleshooting documentation for permission issues when running on Linux.
+
+**Problem**: Linux users encountered "permission denied" errors when mounting kubeconfig
+
+**Solutions documented**:
+1. **Adjust file permissions** (Recommended)
+   ```bash
+   chmod 644 ~/.kube/config
+   ```
+
+2. **Use temporary copy**
+   ```bash
+   cp ~/.kube/config /tmp/kube-config-kdiff
+   chmod 644 /tmp/kube-config-kdiff
+   # Mount /tmp/kube-config-kdiff instead
+   ```
+
+3. **Run as current user**
+   ```bash
+   docker run --user $(id -u):$(id -g) ...
+   ```
+
+## Improvements
+
+### Error Handling
+- Exit code 2 for context validation failures (distinguishable from comparison differences)
+- Consistent error formatting across all validation failures
+- Actionable suggestions in all error messages
+
+### Documentation
+- New "Troubleshooting" section in DOCKER_README.md
+- Step-by-step solutions for common Linux issues
+- Examples for both permission and context errors
+
+## Testing
+- 6 new tests for context validation
+- Validates error messages, exit codes, and suggestions
+- All 45 tests passing (39 existing + 6 new)
+
+---
+
 # kdiff v1.5.1 - Unified Namespace Parameter
 
 ## Improvements
