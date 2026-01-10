@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-01-10
+
+### Fixed
+- **Docker image structure**: Fixed missing kdiff_cli.py in Docker image
+  * Added kdiff_cli.py to /app/ directory in Dockerfile
+  * Corrected lib/ path from /usr/local/lib/ to /app/lib/
+  * Resolves "ModuleNotFoundError: No module named 'kdiff_cli'" in Docker container
+  * Docker image now includes all required files for refactored structure
+
+### Changed
+- Updated Dockerfile to match new code architecture with bin/kdiff wrapper
+
 ## [1.5.8] - 2026-01-10
 
 ### Fixed
