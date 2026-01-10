@@ -1957,6 +1957,17 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             transform: none;
         }}
         
+        /* Hide spinner arrows for diff counter input */
+        #diffCounterInput::-webkit-outer-spin-button,
+        #diffCounterInput::-webkit-inner-spin-button {{
+            -webkit-appearance: none;
+            margin: 0;
+        }}
+        
+        #diffCounterInput[type=number] {{
+            -moz-appearance: textfield;
+        }}
+        
         .sidebyside-container {{
             display: flex;
             flex-direction: row;
@@ -2703,16 +2714,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                    (leftLine.classList.contains('added') || 
                                     leftLine.classList.contains('removed') || 
                                     leftLine.classList.contains('modified')) &&
-                                   leftLine.style.display !== 'none' &&
-                                   leftLine.offsetParent !== null;
+                                   window.getComputedStyle(leftLine).display !== 'none';
                                    
                 const rightIsDiff = rightLine && 
                                     !rightLine.classList.contains('empty-placeholder') &&
                                     (rightLine.classList.contains('added') || 
                                      rightLine.classList.contains('removed') || 
                                      rightLine.classList.contains('modified')) &&
-                                    rightLine.style.display !== 'none' &&
-                                    rightLine.offsetParent !== null;
+                                    window.getComputedStyle(rightLine).display !== 'none';
                 
                 // Only add if at least one side has a real visible diff
                 if (leftIsDiff || rightIsDiff) {{
@@ -2731,12 +2740,48 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         function updateDiffCounter() {{
-            const counter = document.getElementById('diffCounter');
-            if (counter) {{
-                const total = allDiffs.length;
+            const input = document.getElementById('diffCounterInput');
+            const total = document.getElementById('diffCounterTotal');
+            
+            if (input && total) {{
+                const totalDiffs = allDiffs.length;
                 const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
-                counter.textContent = `${{current}} / ${{total}}`;
+                
+                input.value = current;
+                total.textContent = totalDiffs;
             }}
+        }}
+        
+        function handleDiffCounterKeypress(event) {{
+            // Only allow numbers and Enter key
+            if (event.key === 'Enter') {{
+                event.preventDefault();
+                handleDiffCounterChange();
+                event.target.blur();
+            }} else if (!/[0-9]/.test(event.key) && event.key !== 'Backspace' && event.key !== 'Delete' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {{
+                event.preventDefault();
+            }}
+        }}
+        
+        function handleDiffCounterChange() {{
+            const input = document.getElementById('diffCounterInput');
+            if (!input || allDiffs.length === 0) return;
+            
+            let value = parseInt(input.value);
+            
+            // Validate input
+            if (isNaN(value) || value < 1) {{
+                value = 1;
+            }} else if (value > allDiffs.length) {{
+                value = allDiffs.length;
+            }}
+            
+            // Update input with validated value
+            input.value = value;
+            
+            // Navigate to the specified diff (value is 1-based, index is 0-based)
+            currentDiffIndex = value - 1;
+            scrollToDiff(allDiffs[currentDiffIndex]);
         }}
         
         function navigateToNextDiff() {{
@@ -2769,6 +2814,12 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const leftPane = document.getElementById('sideBySideLeftPane');
             const rightPane = document.getElementById('sideBySideRightPane');
             
+            // First, ensure panes are synchronized before navigating
+            // Use the current scroll position as baseline
+            const currentScroll = Math.max(leftPane.scrollTop, rightPane.scrollTop);
+            leftPane.scrollTop = currentScroll;
+            rightPane.scrollTop = currentScroll;
+            
             // Remove previous highlight
             document.querySelectorAll('.code-line.navigated').forEach(line => {{
                 line.classList.remove('navigated');
@@ -2789,10 +2840,18 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                      (diff.leftElement || diff.rightElement);
             if (!referenceElement) return;
             
+            // Force a reflow to get accurate offsetTop after synchronization
+            leftPane.offsetHeight;
+            rightPane.offsetHeight;
+            
             const lineOffset = referenceElement.offsetTop;
             const paneHeight = leftPane.clientHeight;
             const lineHeight = referenceElement.clientHeight;
             const targetScroll = lineOffset - (paneHeight / 2) + (lineHeight / 2);
+            
+            // Disable sync temporarily to avoid conflicts during smooth scroll
+            const leftPaneClone = leftPane.cloneNode(false);
+            const rightPaneClone = rightPane.cloneNode(false);
             
             // Smooth scroll both panes synchronously
             leftPane.scrollTo({{
@@ -2832,12 +2891,20 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             let isLeftScrolling = false;
             let isRightScrolling = false;
+            let scrollTimeout = null;
             
             leftPane.addEventListener('scroll', function() {{
                 if (!isRightScrolling) {{
                     isLeftScrolling = true;
                     rightPane.scrollTop = leftPane.scrollTop;
-                    setTimeout(() => {{ isLeftScrolling = false; }}, 10);
+                    
+                    // Clear previous timeout
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    
+                    // Reset flag after scroll completes
+                    scrollTimeout = setTimeout(() => {{ 
+                        isLeftScrolling = false;
+                    }}, 50);
                 }}
             }});
             
@@ -2845,7 +2912,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 if (!isLeftScrolling) {{
                     isRightScrolling = true;
                     leftPane.scrollTop = rightPane.scrollTop;
-                    setTimeout(() => {{ isRightScrolling = false; }}, 10);
+                    
+                    // Clear previous timeout
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    
+                    // Reset flag after scroll completes
+                    scrollTimeout = setTimeout(() => {{ 
+                        isRightScrolling = false;
+                    }}, 50);
                 }}
             }});
         }}
@@ -3242,7 +3316,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <button class="nav-btn" onclick="navigateToPreviousDiff()" title="Previous Difference (↑)">
                             <span style="font-size: 1.2em;">↑</span> Prev
                         </button>
-                        <span id="diffCounter" style="margin: 0 10px; color: #64748b; font-size: 0.9em; min-width: 60px; text-align: center;">0 / 0</span>
+                        <div style="margin: 0 10px; color: #1e293b; font-size: 1em; font-weight: 600; min-width: 80px; text-align: center; display: flex; align-items: center; gap: 5px;">
+                            <input type="text" id="diffCounterInput" style="width: 45px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 1em; font-weight: 600; color: #1e293b;" onkeypress="handleDiffCounterKeypress(event)" onblur="handleDiffCounterChange()" title="Jump to difference">
+                            <span>/</span>
+                            <span id="diffCounterTotal" style="min-width: 30px;">0</span>
+                        </div>
                         <button class="nav-btn" onclick="navigateToNextDiff()" title="Next Difference (↓)">
                             Next <span style="font-size: 1.2em;">↓</span>
                         </button>
