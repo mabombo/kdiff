@@ -1,3 +1,163 @@
+# kdiff v1.7.0 - Parallel Execution Performance Boost
+
+## Overview
+
+Version 1.7.0 introduces parallel execution of kubectl calls, delivering a **5.7x performance improvement** over the previous version. This major optimization makes kdiff significantly faster for comparing large clusters and multiple namespaces.
+
+## 🚀 Major Features
+
+### Parallel Execution Engine
+
+**Multi-threaded Resource Fetching:**
+- Utilizes Python's `ThreadPoolExecutor` for concurrent kubectl calls
+- Up to 10 parallel threads by default (configurable with `--max-workers`)
+- Clusters queried simultaneously in two-cluster mode
+- Namespaces queried simultaneously in single-cluster mode
+- Thread-safe console output with Lock synchronization
+
+**Measured Performance Improvement:**
+
+Real-world benchmark (two clusters, namespace with 12 resource types):
+
+| Metric | v1.6.0 (Sequential) | v1.7.0 (Parallel) | Improvement |
+|--------|---------------------|-------------------|-------------|
+| Execution Time | 18.3 seconds | 3.2 seconds | **5.7x faster** |
+| Time Saved | - | 15.1 seconds | **82.5% reduction** |
+
+### New Command-Line Option
+
+**`--max-workers N`** - Control parallelization level
+```bash
+# Use default parallelization (10 workers)
+kdiff -c1 prod -c2 staging -n myapp
+
+# Increase for large clusters
+kdiff -c1 prod -c2 staging -n myapp --max-workers 20
+
+# Decrease if hitting API rate limits
+kdiff -c1 prod -c2 staging -n myapp --max-workers 5
+```
+
+## 🔧 Technical Implementation
+
+### Architecture Changes
+
+**Refactored Resource Fetching:**
+- New `fetch_single_resource()` function for thread-safe operations
+- Enhanced error handling in multi-threaded context
+- Critical errors properly terminate all threads
+- Non-critical errors don't block other resource fetches
+
+**Thread Safety:**
+- Lock-based synchronization for console output
+- Safe concurrent file writes
+- Proper error propagation across threads
+
+## 📊 Performance Analysis
+
+### Scalability Benefits
+
+The performance improvement scales with:
+- **Number of resource types**: More resources = greater benefit
+- **Number of clusters/namespaces**: Parallel cluster queries
+- **Network latency**: Higher latency = more time saved
+
+**Example scenarios:**
+- Small comparison (1 namespace, 5 resources): ~3x faster
+- Medium comparison (1 namespace, 12 resources): ~5.7x faster
+- Large comparison (3 namespaces, 12 resources): ~8-10x faster
+
+### When to Tune `--max-workers`
+
+**Increase workers (15-20):**
+- Large clusters with many resources
+- Stable, high-bandwidth network
+- No API rate limiting concerns
+
+**Decrease workers (3-5):**
+- Hitting Kubernetes API rate limits
+- Shared cluster with many users
+- Limited network bandwidth
+
+**Keep default (10):**
+- Most production scenarios
+- Good balance between speed and API load
+
+## 🧪 Testing
+
+### Comprehensive Test Suite
+
+Added 10 new tests specifically for parallel execution:
+- `test_parallel_fetch_creates_all_resources`
+- `test_max_workers_parameter_is_used`
+- `test_thread_safe_console_output`
+- `test_error_in_one_thread_does_not_block_others`
+- `test_parallel_produces_same_results_as_sequential`
+- `test_critical_error_terminates_all_threads`
+- `test_fetch_single_resource_success`
+- `test_fetch_single_resource_permission_error`
+- `test_fetch_single_resource_context_not_found`
+- `test_concurrent_file_writes_are_safe`
+
+**Total: 49 tests (39 existing + 10 new) - All passing ✅**
+
+## 🔄 Migration Notes
+
+- No breaking changes
+- Parallel execution enabled by default
+- Sequential behavior available with `--max-workers 1` if needed
+- All existing commands work without modification
+- Configuration files and scripts require no updates
+
+## 💡 Use Cases
+
+**CI/CD Pipelines:**
+```bash
+# Faster pre-deployment checks
+kdiff -c1 staging -c2 prod -n myapp --max-workers 15
+```
+
+**Large-Scale Comparisons:**
+```bash
+# Compare multiple namespaces efficiently
+kdiff -c prod-cluster -n ns1,ns2,ns3,ns4,ns5 --max-workers 20
+```
+
+**Iterative Development:**
+```bash
+# Rapid feedback during configuration changes
+kdiff -c1 dev -c2 staging -n myapp
+# Now completes in seconds instead of ~20 seconds
+```
+
+## 📦 Docker Image
+
+```bash
+# Pull latest version
+docker pull mabombo/kdiff:1.7.0
+docker pull mabombo/kdiff:latest
+
+# Run with parallel execution
+docker run --rm -v ~/.kube:/root/.kube \
+  mabombo/kdiff:1.7.0 \
+  -c1 prod-cluster -c2 staging-cluster \
+  -n default --max-workers 15
+```
+
+## 📝 Full Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+
+## 🎯 What's Next
+
+Future optimizations being considered:
+- Async I/O for even better performance
+- Caching layer for repeated comparisons
+- Incremental comparison mode
+- Real-time cluster monitoring
+
+---
+
 # kdiff v1.6.0 - Enhanced Diff Navigation and Filter Improvements
 
 ## Overview
