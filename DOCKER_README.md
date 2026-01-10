@@ -154,21 +154,13 @@ docker run --rm -it \
 
 ## Troubleshooting
 
-### Permission Issues on Linux (Automatically Handled)
+### Permission Issues on Linux
 
-**As of v1.5.2**, the Docker image automatically handles kubeconfig permission issues on Linux.
-
-The container includes an entrypoint script that:
-1. Detects if the kubeconfig is not readable due to permission restrictions
-2. Automatically creates a temporary copy with correct permissions inside the container
-3. Uses the temporary copy for kubectl operations
-4. No manual intervention required!
-
-**For older versions or if automatic handling fails**, you can use these manual solutions:
+On Linux systems, you may encounter kubeconfig permission errors when the file is mounted with restrictive permissions (typically 600). The container user cannot read files owned by your host user with these permissions.
 
 **Solution 1: Adjust file permissions (Recommended)**
 ```bash
-# Ensure your kubeconfig is readable by the container user
+# Make your kubeconfig readable by all users (safe for single-user systems)
 chmod 644 ~/.kube/config
 
 # Then run kdiff normally
@@ -179,7 +171,18 @@ docker run --rm -it \
   -c1 prod -c2 staging -n myapp
 ```
 
-**Solution 2: Use a temporary copy**
+**Solution 2: Run as current user**
+```bash
+# Run container with your user ID (most reliable method)
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+**Solution 3: Use a temporary copy**
 ```bash
 # Create a temporary copy with appropriate permissions
 cp ~/.kube/config /tmp/kube-config-kdiff
@@ -194,17 +197,6 @@ docker run --rm -it \
 
 # Clean up after use
 rm /tmp/kube-config-kdiff
-```
-
-**Solution 3: Run as current user (Last resort)**
-```bash
-# Run container as your user (bypasses permission issues but less secure)
-docker run --rm -it \
-  --user $(id -u):$(id -g) \
-  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
-  -v $(pwd)/kdiff_output:/app/kdiff_output \
-  mabombo/kdiff:latest \
-  -c1 prod -c2 staging -n myapp
 ```
 
 ### Invalid Context Errors

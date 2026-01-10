@@ -309,17 +309,46 @@ set -euo pipefail
 RESP_DIR="${RESP_DIR:-}"
 context=""
 kind=""
+command=""
+
+# Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --context) context="$2"; shift 2;;
     -n) shift 2;;
     get) kind="$2"; shift 2;;
+    cluster-info) command="cluster-info"; shift;;
+    config) 
+      if [[ "$2" == "get-contexts" ]]; then
+        command="get-contexts"
+        shift 2
+        # Skip -o name if present
+        if [[ "$1" == "-o" ]]; then shift 2; fi
+      else
+        shift
+      fi
+      ;;
     -o) shift 2;;
     --all-namespaces) shift;;
+    --request-timeout*) shift;;
     *) shift;;
   esac
 done
 
+# Handle cluster-info command (for connectivity testing)
+if [[ "$command" == "cluster-info" ]]; then
+  echo "Kubernetes control plane is running"
+  exit 0
+fi
+
+# Handle config get-contexts command (for context validation)
+if [[ "$command" == "get-contexts" ]]; then
+  echo "cluster1"
+  echo "cluster2"
+  exit 0
+fi
+
+# Handle get resources
 if [[ -z "$context" || -z "$kind" ]]; then
   echo "{}"
   exit 0

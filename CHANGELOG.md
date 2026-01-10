@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-01-10
+
+### Added
+- **Cluster connectivity testing**: Tests cluster connectivity before attempting to fetch resources
+  * Executes `kubectl cluster-info` with 10s timeout for each cluster
+  * Tests connectivity after context validation, before resource fetch
+  * Provides specific error messages for common issues:
+    - DNS resolution failures
+    - Connection timeouts
+    - Authentication errors (Unauthorized)
+    - Permission errors (Forbidden)
+  * Includes helpful suggestions (VPN check, network connectivity, firewall rules, credentials)
+  * Exit code 2 for connectivity failures (distinguishable from comparison differences)
+  * Saves significant time by failing fast on unreachable clusters
+
+### Fixed
+- **Docker user home directory**: Set kdiff user home directory to `/home/kdiff` (was `/`)
+  * Fixes issues with tools expecting a valid home directory
+  * Creates `/home/kdiff/.kube` directory with correct permissions
+  * Improves compatibility when running as current user with `--user` flag
+
+### Changed
+- **docker-entrypoint.sh**: Simplified to not attempt automatic kubeconfig copy
+  * Removed automatic permission handling (was unreliable on some Linux systems)
+  * Now provides clear guidance on manual solutions
+  * Updated DOCKER_README.md with three solutions ordered by preference:
+    1. `chmod 644 ~/.kube/config` (simplest)
+    2. `--user $(id -u):$(id -g)` (most reliable)
+    3. Temporary copy method (for shared systems)
+
+### Technical
+- Added `test_cluster_connectivity()` function in kdiff_cli.py
+- Added `get_available_contexts()` function to retrieve kubectl contexts
+- Integrated connectivity check into main execution flow
+- Comprehensive error parsing for various kubectl failure modes
+- Enhanced error messages with actionable troubleshooting steps
+
 ## [1.5.3] - 2026-01-10
 
 ### Added

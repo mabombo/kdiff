@@ -1,3 +1,152 @@
+# kdiff v1.5.4 - Cluster Connectivity Testing
+
+## Major Features
+
+### 🚀 Cluster Connectivity Testing
+**Fail fast, save time!** kdiff now tests cluster connectivity before attempting to fetch resources, providing immediate feedback on connection issues.
+
+#### What Changed
+- **Pre-flight connectivity check**: Tests each cluster's reachability using `kubectl cluster-info`
+- **Fast failure**: 10-second timeout per cluster, 15-second total limit
+- **Intelligent error detection**: Specific messages for DNS, timeout, auth, and permission issues
+- **Actionable guidance**: Helpful suggestions for VPN, network, firewall, and credential problems
+
+#### How It Works
+```bash
+# If cluster is unreachable, you'll know immediately
+docker run --rm -it \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 unreachable-cluster -n myapp
+
+# Output:
+# [ERROR] CONNECTIVITY ERROR: Connection timeout to cluster 'unreachable-cluster' (exceeded 15 seconds)
+# 
+# Suggestions:
+#   - Check that clusters are running and accessible
+#   - Verify VPN connection if required
+#   - Check network connectivity and firewall rules
+#   - Verify kubeconfig credentials are valid
+```
+
+#### Error Detection
+The connectivity check identifies and provides specific guidance for:
+- **DNS failures**: "unable to resolve host" or "no such host"
+- **Connection timeouts**: Exceeded timeout waiting for cluster response
+- **Unauthorized**: Invalid or expired credentials
+- **Forbidden**: Valid credentials but insufficient permissions
+- **Generic errors**: Other connection issues with full error details
+
+#### Execution Flow
+1. ✅ Validate contexts exist (v1.5.2)
+2. ✅ **Test cluster connectivity (v1.5.4)** ← NEW
+3. ✅ Clean output directory
+4. ✅ Fetch and compare resources
+
+This "fail fast" approach saves significant time by detecting problems before expensive fetch operations begin.
+
+### 🐳 Docker Improvements
+
+#### Fixed: User Home Directory
+- kdiff user home directory now properly set to `/home/kdiff` (was `/`)
+- Fixes compatibility issues with tools expecting a valid home directory
+- Creates `/home/kdiff/.kube` directory automatically with correct permissions
+- Improves experience when running with `--user $(id -u):$(id -g)` flag
+
+#### Updated: Permission Handling
+After testing on various Linux distributions, we've updated the approach:
+- **Removed**: Automatic permission copying (unreliable on some systems)
+- **Added**: Clear documentation with three manual solutions, ordered by preference
+
+**Recommended solutions:**
+
+**Option 1: Simple permissions (best for single-user systems)**
+```bash
+chmod 644 ~/.kube/config
+docker run ... mabombo/kdiff:latest -c1 prod -c2 staging -n myapp
+```
+
+**Option 2: Run as current user (most reliable)**
+```bash
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+**Option 3: Temporary copy (for shared systems)**
+```bash
+cp ~/.kube/config /tmp/kube-config-kdiff
+chmod 644 /tmp/kube-config-kdiff
+docker run -v /tmp/kube-config-kdiff:/home/kdiff/.kube/config:ro ...
+rm /tmp/kube-config-kdiff
+```
+
+## Technical Details
+
+### Connectivity Testing Function
+```python
+def test_cluster_connectivity(context: str) -> tuple[bool, str]:
+    """Test if cluster is reachable using kubectl cluster-info"""
+    # - Uses 'kubectl cluster-info --request-timeout=10s'
+    # - 15-second total timeout via subprocess
+    # - Parses stderr for specific error patterns
+    # - Returns (success: bool, error_message: str)
+```
+
+### Error Parsing
+Comprehensive detection of common kubectl failures:
+- DNS resolution issues
+- Connection timeouts
+- Authentication failures (Unauthorized)
+- Permission issues (Forbidden)
+- Generic connection errors
+
+### Integration Points
+- Runs after context validation (`validate_context()`)
+- Tests all specified clusters in parallel logic
+- Exits with code 2 on connectivity failure
+- Provides detailed suggestions based on error type
+
+## Upgrade Notes
+
+### Breaking Changes
+None. All changes are backward compatible.
+
+### Behavioral Changes
+1. **New exit code**: Program now exits with code 2 on connectivity failures
+2. **Additional startup time**: ~10-15 seconds per unreachable cluster (but saves much more time later)
+3. **Earlier error detection**: Connection issues now caught before fetch operations
+
+### Docker Users
+- **Home directory change**: If scripts relied on `/` as home, update to `/home/kdiff`
+- **Permission handling**: Review DOCKER_README.md for updated guidance
+- **No action required**: If your setup already works, continue as before
+
+## Migration Guide
+
+### From v1.5.3
+No migration needed. Simply pull the new image:
+```bash
+docker pull mabombo/kdiff:1.5.4
+```
+
+### From v1.5.2 or earlier
+Update your kubeconfig mount if needed (see Docker Improvements section above).
+
+## What's Next
+
+Possible future enhancements:
+- Parallel resource fetching for faster comparisons
+- Additional resource type support
+- Web UI for report viewing
+- CI/CD integration templates
+
+---
+
 # kdiff v1.5.3 - Automatic Docker Permission Handling
 
 ## Major Improvement

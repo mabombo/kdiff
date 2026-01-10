@@ -64,6 +64,51 @@ def validate_context(context: str, available_contexts: list[str]) -> bool:
     return True
 
 
+def test_cluster_connectivity(context: str) -> tuple[bool, str]:
+    """
+    Test connectivity to a Kubernetes cluster.
+    
+    Args:
+        context: Kubernetes context name
+        
+    Returns:
+        tuple: (success: bool, error_message: str)
+    """
+    try:
+        # Try to get cluster info - fast and reliable connectivity test
+        proc = subprocess.run(
+            ['kubectl', '--context', context, 'cluster-info', '--request-timeout=10s'],
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        
+        if proc.returncode == 0:
+            return True, ""
+        
+        # Parse error to provide helpful message
+        stderr = proc.stderr.strip()
+        if 'does not exist' in stderr:
+            return False, f"Context '{context}' does not exist in kubeconfig"
+        elif 'no such host' in stderr or 'dial tcp' in stderr:
+            return False, f"Unable to connect to cluster '{context}' - cluster unreachable (check DNS/network/VPN)"
+        elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
+            return False, f"Connection timeout to cluster '{context}' - cluster may be down or unreachable"
+        elif 'Forbidden' in stderr or 'forbidden' in stderr:
+            return False, f"Insufficient permissions to access cluster '{context}'"
+        elif 'Unauthorized' in stderr or 'unauthorized' in stderr:
+            return False, f"Authentication failed for cluster '{context}' - check credentials"
+        else:
+            return False, f"Unable to connect to cluster '{context}': {stderr[:200]}"
+            
+    except subprocess.TimeoutExpired:
+        return False, f"Connection timeout to cluster '{context}' (exceeded 15 seconds)"
+    except FileNotFoundError:
+        return False, "kubectl not found in PATH"
+    except Exception as e:
+        return False, f"Error testing connectivity to '{context}': {str(e)}"
+
+
 def cleanup_output_dir(outdir: Path):
     """Clean output directory if it already exists."""
     if outdir.exists():
@@ -401,6 +446,37 @@ Default resources compared:
     
     if not contexts_valid:
         sys.exit(2)
+
+    # Test cluster connectivity before proceeding
+    print("Testing cluster connectivity...")
+    connectivity_failed = False
+    
+    if single_cluster_mode:
+        success, error_msg = test_cluster_connectivity(args.c)
+        if not success:
+            print(f"\n{RED}[ERROR] CONNECTIVITY ERROR:{RESET} {error_msg}", file=sys.stderr)
+            connectivity_failed = True
+    else:
+        # Test both clusters in two-cluster mode
+        success1, error_msg1 = test_cluster_connectivity(args.c1)
+        if not success1:
+            print(f"\n{RED}[ERROR] CONNECTIVITY ERROR (Cluster 1):{RESET} {error_msg1}", file=sys.stderr)
+            connectivity_failed = True
+            
+        success2, error_msg2 = test_cluster_connectivity(args.c2)
+        if not success2:
+            print(f"\n{RED}[ERROR] CONNECTIVITY ERROR (Cluster 2):{RESET} {error_msg2}", file=sys.stderr)
+            connectivity_failed = True
+    
+    if connectivity_failed:
+        print(f"\n{YELLOW}Suggestions:{RESET}", file=sys.stderr)
+        print(f"  - Check that clusters are running and accessible", file=sys.stderr)
+        print(f"  - Verify VPN connection if required", file=sys.stderr)
+        print(f"  - Check network connectivity and firewall rules", file=sys.stderr)
+        print(f"  - Verify kubeconfig credentials are valid", file=sys.stderr)
+        sys.exit(2)
+    
+    print(f"{GREEN}✓{RESET} All clusters are reachable")
 
     resources = RESOURCES.copy()
     if args.r:

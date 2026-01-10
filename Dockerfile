@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 
 LABEL maintainer="Mauro Casiraghi"
 LABEL description="kdiff - Kubernetes cluster comparison tool"
-LABEL version="1.5.3"
+LABEL version="1.5.4"
 
 # Upgrade pip to latest version to fix security vulnerabilities
 RUN pip install --no-cache-dir --upgrade pip
@@ -20,9 +20,11 @@ RUN apk add --no-cache \
     && mv kubectl /usr/local/bin/ \
     && kubectl version --client
 
-# Create non-root user for security
+# Create non-root user for security with home directory
 RUN addgroup -g 1000 kdiff && \
-    adduser -D -u 1000 -G kdiff kdiff
+    adduser -D -u 1000 -G kdiff -h /home/kdiff kdiff && \
+    mkdir -p /home/kdiff/.kube && \
+    chown -R kdiff:kdiff /home/kdiff
 
 # Set working directory
 WORKDIR /app
