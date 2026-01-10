@@ -422,11 +422,25 @@ fi
                 text=True
             )
             
+            # Debug: print output to help diagnose issues
+            if result.returncode != 1:
+                print(f"\nUnexpected exit code: {result.returncode}")
+                print(f"STDOUT:\n{result.stdout}")
+                print(f"STDERR:\n{result.stderr}")
+                
+            # Check summary first to provide better error message
+            summary_path = out_dir / 'summary.json'
+            if not summary_path.exists():
+                print(f"\nSummary file not found at: {summary_path}")
+                print(f"Output directory contents: {list(out_dir.iterdir()) if out_dir.exists() else 'Directory does not exist'}")
+                print(f"Exit code: {result.returncode}")
+                print(f"STDOUT:\n{result.stdout}")
+                print(f"STDERR:\n{result.stderr}")
+            
             # Should exit 1 (differences found)
             self.assertEqual(result.returncode, 1)
             
             # Check summary
-            summary_path = out_dir / 'summary.json'
             self.assertTrue(summary_path.exists())
             
             summary = json.loads(summary_path.read_text())

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-01-10
+
+### Added
+- **Version flag**: Added `-v` and `--version` command-line options to display kdiff version
+  * Shows current version: `kdiff -v` or `kdiff --version`
+  * Useful for troubleshooting and version verification
+
+### Fixed
+- **Docker HOME directory with --user flag**: Fixed HOME environment variable when using `--user $(id -u):$(id -g)`
+  * Entrypoint script now sets `HOME=/home/kdiff` if HOME is `/` or empty
+  * Fixes kubeconfig path resolution when running as current user
+  * Resolves issues with tools expecting a valid home directory
+  * Improves compatibility with `--user` flag on Linux systems
+
+### Changed
+- **docker-entrypoint.sh**: Enhanced to explicitly set HOME directory when needed
+  * Automatically detects if HOME is not properly set (e.g., when using --user flag)
+  * Sets HOME=/home/kdiff to ensure consistent behavior
+  * Improves KUBECONFIG path resolution using $HOME variable
+
 ## [1.5.4] - 2026-01-10
 
 ### Added

@@ -2,9 +2,15 @@
 set -e
 
 # Entrypoint script for kdiff Docker container
-# Sets up kubeconfig path and provides helpful error messages if needed
+# Sets up environment and provides helpful error messages if needed
 
-KUBECONFIG_PATH="${KUBECONFIG:-/home/kdiff/.kube/config}"
+# Set HOME to /home/kdiff if it's not already set correctly
+# This is needed when running with --user flag which doesn't set HOME
+if [ "$HOME" = "/" ] || [ -z "$HOME" ]; then
+    export HOME=/home/kdiff
+fi
+
+KUBECONFIG_PATH="${KUBECONFIG:-$HOME/.kube/config}"
 
 # Check if kubeconfig file exists
 if [ -f "$KUBECONFIG_PATH" ]; then

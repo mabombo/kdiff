@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 
 LABEL maintainer="Mauro Casiraghi"
 LABEL description="kdiff - Kubernetes cluster comparison tool"
-LABEL version="1.5.4"
+LABEL version="1.5.5"
 
 # Upgrade pip to latest version to fix security vulnerabilities
 RUN pip install --no-cache-dir --upgrade pip

@@ -14,6 +14,9 @@ from pathlib import Path
 from datetime import datetime
 import importlib.util
 
+# Version
+__version__ = "1.5.5"
+
 ROOT = Path(__file__).resolve().parent.parent
 LIB = ROOT / 'lib'
 
@@ -338,6 +341,11 @@ Default resources compared:
   deployment, statefulset, daemonset, configmap, secret, persistentvolumeclaim,
   serviceaccount, role, rolebinding, horizontalpodautoscaler, cronjob, job
         ''')
+    
+    # Add version argument
+    parser.add_argument('-v', '--version',
+                       action='version',
+                       version=f'kdiff {__version__}')
     
     parser.add_argument('-c1', 
                        metavar='CONTEXT1',

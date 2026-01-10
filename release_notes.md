@@ -1,3 +1,101 @@
+# kdiff v1.5.5 - Version Flag and Docker HOME Fix
+
+## Quick Fixes
+
+### 📌 Version Flag
+Added command-line options to check kdiff version:
+
+```bash
+# Check version
+kdiff -v
+kdiff --version
+
+# Output: kdiff 1.5.5
+```
+
+Useful for:
+- Troubleshooting issues
+- Verifying installed version
+- Checking Docker image version
+- Documentation and support requests
+
+### 🐳 Docker HOME Directory Fix
+
+**Problem:** When using `--user $(id -u):$(id -g)` flag with Docker, the HOME environment variable was set to `/` instead of `/home/kdiff`, causing kubeconfig path resolution issues.
+
+**Solution:** The entrypoint script now automatically detects and fixes HOME directory:
+
+```bash
+# Now works correctly with --user flag
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+**What changed:**
+- Entrypoint checks if `HOME=/` or is empty
+- Automatically sets `HOME=/home/kdiff`
+- Ensures `$HOME/.kube/config` resolves correctly
+- Fixes compatibility with tools expecting valid home directory
+
+**Before (v1.5.4):**
+```bash
+$ docker run --user $(id -u):$(id -g) ... --entrypoint /bin/bash mabombo/kdiff:latest
+$ echo $HOME
+/  # Wrong!
+```
+
+**After (v1.5.5):**
+```bash
+$ docker run --user $(id -u):$(id -g) ... --entrypoint /bin/bash mabombo/kdiff:latest
+$ echo $HOME
+/home/kdiff  # Correct!
+```
+
+## Technical Details
+
+### Version Implementation
+- Added `__version__` variable in kdiff_cli.py
+- Added `-v, --version` argument to ArgumentParser
+- Uses argparse `action='version'` for automatic handling
+- Version synchronized across all files (pyproject.toml, setup.py, Dockerfile)
+
+### HOME Directory Fix
+The docker-entrypoint.sh now includes:
+```bash
+# Set HOME to /home/kdiff if it's not already set correctly
+if [ "$HOME" = "/" ] || [ -z "$HOME" ]; then
+    export HOME=/home/kdiff
+fi
+```
+
+This ensures consistent behavior regardless of how the container is launched.
+
+## Upgrade Notes
+
+### Breaking Changes
+None. All changes are backward compatible.
+
+### Recommended Actions
+1. **Pull new image:** `docker pull mabombo/kdiff:1.5.5`
+2. **Test version flag:** `docker run --rm mabombo/kdiff:latest -v`
+3. **No changes needed** to existing scripts or configurations
+
+### For --user Flag Users
+If you were experiencing issues with kubeconfig not being found when using `--user $(id -u):$(id -g)`, this release fixes that problem. Simply update to v1.5.5.
+
+## Compatibility
+
+- ✅ Works with all previous kubeconfig mount methods
+- ✅ Compatible with `--user` flag on Linux/macOS
+- ✅ No changes to command-line interface (except new -v flag)
+- ✅ All previous features and fixes retained
+
+---
+
 # kdiff v1.5.4 - Cluster Connectivity Testing
 
 ## Major Features
