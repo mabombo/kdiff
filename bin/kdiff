@@ -17,7 +17,7 @@ import importlib.util
 # Version
 __version__ = "1.5.6"
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 LIB = ROOT / 'lib'
 
 # Default resources
@@ -35,7 +35,26 @@ ALL_SUPPORTED_RESOURCES = RESOURCES + VOLATILE_RESOURCES + SERVICE_INGRESS_RESOU
 GREEN = '\033[0;32m'
 YELLOW = '\033[0;33m'
 RED = '\033[0;31m'
+CYAN = '\033[0;36m'
 RESET = '\033[0m'
+
+
+def print_banner():
+    """Print kdiff ASCII banner with version."""
+    banner = f"""
+╔══════════════════════════════════════════╗
+║                                          ║
+║   _  _____ ___ ___ ___                   ║
+║  | |/ /   \\_ _| __| __|                  ║
+║  | ' <| |) | || _|| _|                   ║
+║  |_|\\_\\___/___|_| |_|                    ║
+║                                          ║
+║  Kubernetes Cluster Comparison Tool     ║
+║  Version: {__version__:<30} ║
+║                                          ║
+╚══════════════════════════════════════════╝
+"""
+    print(f"{CYAN}{banner}{RESET}", flush=True)
 
 
 def check_deps():
@@ -417,6 +436,9 @@ Default resources compared:
                        help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
     
     args = parser.parse_args()
+
+    # Print banner
+    print_banner()
 
     # Validate arguments and determine mode
     single_cluster_mode = False
