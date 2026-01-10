@@ -14,7 +14,6 @@ __all__ = [
     "compare", 
     "diff_details",
     "report",
-    "report_md",
 ]
 
 def __getattr__(name):
