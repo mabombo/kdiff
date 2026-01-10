@@ -15,6 +15,9 @@ exit_code=$?
 if [ $exit_code -eq 0 ]; then
   echo ""
   echo "All tests passed ✅"
+  echo ""
+  echo "Running code quality certification..."
+  python3 "$ROOT/quality_check.py"
 else
   echo ""
   echo "Some tests failed ❌"

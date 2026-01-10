@@ -118,21 +118,37 @@ def check_imports(file_path):
 
 
 def run_tests():
-    """Run test suite."""
+    """Run test suite directly (not via run_tests.sh to avoid recursion)."""
     try:
-        result = subprocess.run(
-            ['bash', 'tests/run_tests.sh'],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        passed = result.returncode == 0
-        # Extract test count
-        output = result.stdout + result.stderr
-        if 'Ran ' in output:
-            test_line = [l for l in output.split('\n') if 'Ran ' in l]
-            return passed, test_line[0] if test_line else "Tests completed"
-        return passed, "Tests executed"
+        # Run test files directly
+        test_files = ['tests/test_kdiff.py', 'tests/test_cr_discovery.py']
+        all_passed = True
+        total_tests = 0
+        
+        for test_file in test_files:
+            if Path(test_file).exists():
+                result = subprocess.run(
+                    ['python3', test_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode != 0:
+                    all_passed = False
+                
+                # Extract test count
+                output = result.stdout + result.stderr
+                if 'Ran ' in output:
+                    test_line = [l for l in output.split('\n') if 'Ran ' in l]
+                    if test_line:
+                        import re
+                        match = re.search(r'Ran (\d+)', test_line[0])
+                        if match:
+                            total_tests += int(match.group(1))
+        
+        if total_tests > 0:
+            return all_passed, f"Ran {total_tests} tests in total"
+        return all_passed, "Tests executed"
     except Exception as e:
         return False, str(e)
 
