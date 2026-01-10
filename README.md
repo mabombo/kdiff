@@ -299,5 +299,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.5.7
+Current version: 1.5.8
 

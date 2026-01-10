@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-01-10
+
+### Fixed
+- **Version synchronization**: Fixed version display inconsistency
+  * Corrected version number in kdiff_cli.py to match lib package
+  * Resolved version mismatch between different modules
+
+### Changed
+- **Single source of truth for version**: Refactored version management
+  * Removed duplicate `__version__` definition from kdiff_cli.py
+  * Now imports `__version__` from lib package instead
+  * Follows DRY principle (Don't Repeat Yourself)
+  * Single definition in lib/__init__.py ensures consistency
+  * Eliminates risk of version mismatches across modules
+
 ## [1.5.7] - 2026-01-10
 
 ### Added
