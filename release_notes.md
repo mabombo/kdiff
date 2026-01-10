@@ -1,3 +1,75 @@
+# kdiff v1.5.3 - Automatic Docker Permission Handling
+
+## Major Improvement
+
+### Automatic Kubeconfig Permission Handling
+**Problem solved!** No more manual permission fixes required when using Docker on Linux.
+
+#### What Changed
+- **New entrypoint script**: Automatically detects and fixes kubeconfig permission issues
+- **Zero configuration**: Works transparently without user intervention
+- **Secure**: Temporary copy created only inside container, original file untouched
+
+#### How It Works
+```bash
+# Just run normally - permissions handled automatically!
+docker run --rm -it \
+  -v ~/.kube/config:/home/kdiff/.kube/config:ro \
+  -v $(pwd)/kdiff_output:/app/kdiff_output \
+  mabombo/kdiff:latest \
+  -c1 prod -c2 staging -n myapp
+```
+
+The entrypoint script:
+1. ✅ Detects if kubeconfig is readable
+2. ✅ If not, creates temporary copy with correct permissions
+3. ✅ Uses temporary copy for kubectl operations
+4. ✅ Cleans up automatically when container exits
+
+#### Before vs After
+
+**Before (v1.5.2 and earlier):**
+```bash
+# Required manual permission changes
+chmod 644 ~/.kube/config  # or
+cp ~/.kube/config /tmp/kube-config
+chmod 644 /tmp/kube-config
+# Then run docker...
+```
+
+**After (v1.5.3+):**
+```bash
+# Just works! No manual steps needed
+docker run ... mabombo/kdiff:latest -c1 prod -c2 staging -n myapp
+```
+
+## Technical Details
+
+### Entrypoint Script
+- New `docker-entrypoint.sh` wraps kdiff execution
+- Checks `KUBECONFIG` environment variable (defaults to `/home/kdiff/.kube/config`)
+- Attempts to read kubeconfig file
+- If permission denied:
+  * Creates `/tmp/kubeconfig` with copy of content
+  * Sets `KUBECONFIG=/tmp/kubeconfig`
+  * Proceeds with kdiff execution
+- If unable to fix, shows clear error with manual solutions
+
+### Security
+- Temporary file created inside container only
+- Original kubeconfig remains untouched
+- Temporary file deleted when container exits
+- No security compromise
+
+## Compatibility
+
+- ✅ Works on Linux (primary target)
+- ✅ Works on macOS (no changes needed, already worked)
+- ✅ Works on Windows (no changes needed, already worked)
+- ✅ Backward compatible with all previous usage patterns
+
+---
+
 # kdiff v1.5.2 - Context Validation & Docker Fixes
 
 ## New Features

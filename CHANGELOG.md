@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-01-10
+
+### Added
+- **Automatic kubeconfig permission handling in Docker**: No more manual fixes required on Linux!
+  * New `docker-entrypoint.sh` script automatically detects permission issues
+  * Creates temporary copy of kubeconfig with correct permissions inside container
+  * Transparent to the user - works automatically
+  * Falls back to clear error messages if automatic fix fails
+  * Eliminates the need for `chmod 777` or other manual permission changes
+
+### Changed
+- **Dockerfile**: Updated to use custom entrypoint for automatic permission handling
+- **DOCKER_README.md**: Updated to reflect automatic permission handling (v1.5.2+)
+  * Moved manual solutions to "For older versions" section
+  * Highlighted automatic handling as default behavior
+
+### Technical
+- Added `docker-entrypoint.sh` wrapper script
+- Entrypoint checks kubeconfig readability before execution
+- Creates `/tmp/kubeconfig` copy if permission issues detected
+- Sets KUBECONFIG environment variable to temporary location
+- Maintains security by keeping temporary copy inside container only
+
 ## [1.5.2] - 2026-01-09
 
 ### Added

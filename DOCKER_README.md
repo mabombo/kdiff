@@ -154,9 +154,17 @@ docker run --rm -it \
 
 ## Troubleshooting
 
-### Permission Issues on Linux
+### Permission Issues on Linux (Automatically Handled)
 
-On Linux systems, you may encounter permission errors when mounting the kubeconfig file. This happens because the container runs as user `kdiff` (uid 1000) and may not have read access to your kubeconfig.
+**As of v1.5.2**, the Docker image automatically handles kubeconfig permission issues on Linux.
+
+The container includes an entrypoint script that:
+1. Detects if the kubeconfig is not readable due to permission restrictions
+2. Automatically creates a temporary copy with correct permissions inside the container
+3. Uses the temporary copy for kubectl operations
+4. No manual intervention required!
+
+**For older versions or if automatic handling fails**, you can use these manual solutions:
 
 **Solution 1: Adjust file permissions (Recommended)**
 ```bash
@@ -242,4 +250,4 @@ For issues, questions, or contributions, please visit:
 
 ## Version
 
-Current version: 1.4.0
+Current version: 1.5.3
