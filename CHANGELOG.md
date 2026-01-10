@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-01-10
+
+### Fixed
+- **Namespace-scoped connectivity testing**: Fixed connectivity check for users with namespace-only permissions
+  * Connectivity test now uses `kubectl get pods -n <namespace>` when namespaces are specified
+  * Falls back to `kubectl cluster-info` for cluster-level permissions when no namespaces specified
+  * Resolves "Insufficient permissions" error for users with namespace-scoped RBAC
+  * Better error messages distinguishing namespace vs cluster-level permission issues
+
+### Technical
+- Modified `test_cluster_connectivity()` to accept optional `namespaces` parameter
+- Passes namespace list to connectivity check for namespace-scoped testing
+- Updated error messages to clarify permission scope (namespace vs cluster)
+
 ## [1.5.5] - 2026-01-10
 
 ### Added

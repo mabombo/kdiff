@@ -1,3 +1,141 @@
+# kdiff v1.5.6 - Namespace-Scoped Connectivity Fix
+
+## Critical Fix
+
+### 🔧 Namespace-Scoped Permissions Support
+
+**Problem:** Users with namespace-only RBAC permissions were getting "Insufficient permissions" errors during connectivity testing, even when they had full access to the specified namespaces.
+
+**Root Cause:** The connectivity test used `kubectl cluster-info` which requires cluster-level permissions. Many Kubernetes users only have namespace-scoped access.
+
+**Solution:** Smart connectivity testing that adapts to your permission level:
+
+```bash
+# Now works correctly with namespace-scoped permissions
+kdiff -c REEVO-BMW-PROD -n connect,default
+
+# Output:
+# Validating Kubernetes contexts...
+# Testing cluster connectivity...
+# ✓ All clusters are reachable
+# Mode: Single-cluster multi-namespace comparison
+# Cluster: REEVO-BMW-PROD
+# Namespaces: connect, default
+```
+
+### How It Works
+
+**When namespaces are specified:**
+- Tests connectivity using `kubectl get pods -n <first-namespace>`
+- Only requires namespace-scoped permissions
+- Perfect for users with limited RBAC access
+
+**When no namespaces specified:**
+- Falls back to `kubectl cluster-info`
+- Requires cluster-level permissions
+- Used for cluster-wide comparisons
+
+**Error Messages:**
+- Clearly distinguishes between namespace and cluster-level permission issues
+- Provides specific guidance based on your permission scope
+
+### Before vs After
+
+**Before (v1.5.5):**
+```bash
+$ kdiff -c REEVO-BMW-PROD -n connect,default
+Validating Kubernetes contexts...
+Testing cluster connectivity...
+
+[ERROR] CONNECTIVITY ERROR: Insufficient permissions to access cluster 'REEVO-BMW-PROD'
+# ❌ Failed even with namespace permissions
+```
+
+**After (v1.5.6):**
+```bash
+$ kdiff -c REEVO-BMW-PROD -n connect,default
+Validating Kubernetes contexts...
+Testing cluster connectivity...
+✓ All clusters are reachable
+# ✅ Works with namespace-scoped permissions!
+```
+
+## Technical Details
+
+### Implementation
+```python
+def test_cluster_connectivity(context: str, namespaces: list[str] | None = None):
+    """Test connectivity with appropriate permissions level"""
+    if namespaces:
+        # Namespace-scoped test: kubectl get pods -n <namespace>
+        test_ns = namespaces[0]
+        kubectl('get', 'pods', '-n', test_ns, ...)
+    else:
+        # Cluster-scoped test: kubectl cluster-info
+        kubectl('cluster-info', ...)
+```
+
+### Permission Requirements
+
+**Namespace-Scoped Mode** (when `-n` specified):
+- ✅ Read access to specified namespaces
+- ✅ `pods` resource read permission
+- ❌ No cluster-level access needed
+
+**Cluster-Scoped Mode** (no `-n` specified):
+- ❌ Cluster-level permissions required
+- ❌ Access to cluster info APIs
+
+### Error Message Improvements
+
+**Namespace permission error:**
+```
+[ERROR] Access denied to namespace 'myapp' in cluster 'prod-cluster'
+Check RBAC permissions for namespace-scoped resources
+```
+
+**Cluster permission error:**
+```
+[ERROR] Insufficient cluster-level permissions for 'prod-cluster'
+This may be normal if you have only namespace-scoped access
+```
+
+## Who Benefits
+
+- ✅ Developers with namespace-only access
+- ✅ Teams using restrictive RBAC policies
+- ✅ Multi-tenant cluster environments
+- ✅ Users following principle of least privilege
+
+## Upgrade Notes
+
+### Breaking Changes
+None. All changes are backward compatible.
+
+### Behavioral Changes
+1. **Smarter permission detection**: Automatically uses namespace-scoped testing when possible
+2. **Better error messages**: Clear distinction between permission levels
+3. **No user action required**: Automatically adapts to your permissions
+
+### Testing Your Setup
+
+```bash
+# Test with namespace permissions
+kdiff -c my-cluster -n myapp,staging
+
+# Test with cluster permissions (if available)
+kdiff -c1 prod -c2 staging
+```
+
+## Compatibility
+
+- ✅ Works with all Kubernetes RBAC configurations
+- ✅ Compatible with namespace-scoped service accounts
+- ✅ Supports multi-tenant environments
+- ✅ No changes to existing command-line interface
+
+---
+
 # kdiff v1.5.5 - Version Flag and Docker HOME Fix
 
 ## Quick Fixes

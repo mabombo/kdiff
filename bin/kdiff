@@ -15,7 +15,7 @@ from datetime import datetime
 import importlib.util
 
 # Version
-__version__ = "1.5.5"
+__version__ = "1.5.6"
 
 ROOT = Path(__file__).resolve().parent.parent
 LIB = ROOT / 'lib'
@@ -67,24 +67,37 @@ def validate_context(context: str, available_contexts: list[str]) -> bool:
     return True
 
 
-def test_cluster_connectivity(context: str) -> tuple[bool, str]:
+def test_cluster_connectivity(context: str, namespaces: list[str] | None = None) -> tuple[bool, str]:
     """
     Test connectivity to a Kubernetes cluster.
     
     Args:
         context: Kubernetes context name
+        namespaces: Optional list of namespaces to test access to (for namespace-scoped permissions)
         
     Returns:
         tuple: (success: bool, error_message: str)
     """
     try:
-        # Try to get cluster info - fast and reliable connectivity test
-        proc = subprocess.run(
-            ['kubectl', '--context', context, 'cluster-info', '--request-timeout=10s'],
-            capture_output=True,
-            text=True,
-            timeout=15
-        )
+        # If namespaces are specified, test access to first namespace
+        # This works with namespace-scoped permissions
+        if namespaces and len(namespaces) > 0:
+            # Use 'kubectl get ns' to test connectivity - works with namespace-scoped access
+            test_ns = namespaces[0] if isinstance(namespaces, list) else namespaces
+            proc = subprocess.run(
+                ['kubectl', '--context', context, 'get', 'pods', '-n', test_ns, '--request-timeout=10s', '-o', 'name'],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+        else:
+            # Try to get cluster info - requires cluster-level permissions
+            proc = subprocess.run(
+                ['kubectl', '--context', context, 'cluster-info', '--request-timeout=10s'],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
         
         if proc.returncode == 0:
             return True, ""
@@ -98,7 +111,11 @@ def test_cluster_connectivity(context: str) -> tuple[bool, str]:
         elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
             return False, f"Connection timeout to cluster '{context}' - cluster may be down or unreachable"
         elif 'Forbidden' in stderr or 'forbidden' in stderr:
-            return False, f"Insufficient permissions to access cluster '{context}'"
+            # If testing with namespace and got Forbidden, might not have access to that namespace
+            if namespaces:
+                return False, f"Access denied to namespace '{test_ns}' in cluster '{context}' - check RBAC permissions"
+            else:
+                return False, f"Insufficient cluster-level permissions for '{context}' - this may be normal if you have only namespace-scoped access"
         elif 'Unauthorized' in stderr or 'unauthorized' in stderr:
             return False, f"Authentication failed for cluster '{context}' - check credentials"
         else:
@@ -460,18 +477,20 @@ Default resources compared:
     connectivity_failed = False
     
     if single_cluster_mode:
-        success, error_msg = test_cluster_connectivity(args.c)
+        success, error_msg = test_cluster_connectivity(args.c, namespaces_list)
         if not success:
             print(f"\n{RED}[ERROR] CONNECTIVITY ERROR:{RESET} {error_msg}", file=sys.stderr)
             connectivity_failed = True
     else:
         # Test both clusters in two-cluster mode
-        success1, error_msg1 = test_cluster_connectivity(args.c1)
+        # Pass namespace list if specified for namespace-scoped permission testing
+        test_namespaces = namespaces_list if namespaces_list else None
+        success1, error_msg1 = test_cluster_connectivity(args.c1, test_namespaces)
         if not success1:
             print(f"\n{RED}[ERROR] CONNECTIVITY ERROR (Cluster 1):{RESET} {error_msg1}", file=sys.stderr)
             connectivity_failed = True
             
-        success2, error_msg2 = test_cluster_connectivity(args.c2)
+        success2, error_msg2 = test_cluster_connectivity(args.c2, test_namespaces)
         if not success2:
             print(f"\n{RED}[ERROR] CONNECTIVITY ERROR (Cluster 2):{RESET} {error_msg2}", file=sys.stderr)
             connectivity_failed = True
