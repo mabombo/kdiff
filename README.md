@@ -8,11 +8,13 @@ kdiff is a Python tool for comparing Kubernetes configurations between two clust
 
 ## Features
 
+- **Parallel execution**: Multi-threaded kubectl calls for fast resource fetching
 - Intelligent normalization: removes volatile fields (uid, resourceVersion, timestamps)
 - Smart ConfigMap diff: shows only modified lines instead of entire content
 - Environment variables compared by name, not array position
 - Interactive HTML reports with collapsible sections and dual-pane diff viewer
 - Side-by-side comparison with inline character-level highlighting
+- Diff navigation: Previous/Next buttons with editable counter for jumping to specific differences
 - Filter capabilities for added/removed/modified lines
 - Automated detection and disabling of non-applicable filters
 - Support for multiple resource types (Deployment, ConfigMap, Secret, etc.)
@@ -110,6 +112,7 @@ kdiff -c CONTEXT --namespaces NS1,NS2[,NS3...] [OPTIONS]
 - `--include-resource-types TYPES` : Specify resource types to include
 - `--exclude-resources TYPES` : Exclude specific resource types
 - `--include-volatile` : Include volatile resources (Pod, ReplicaSet)
+- `--max-workers N` : Maximum parallel threads (default: 10, increase for faster performance)
 
 ### Examples
 
@@ -147,6 +150,9 @@ kdiff -c prod-cluster -n dev,staging,prod -r configmap
 
 # Include metadata in namespace comparison
 kdiff -c prod-cluster -n ns1,ns2 --show-metadata
+
+# Use more parallel workers for faster performance (large clusters)
+kdiff -c prod-cluster -n ns1,ns2,ns3 --max-workers 20
 ```
 
 ## Output Structure
@@ -188,11 +194,13 @@ The interactive HTML report (`diff-details.html`) provides:
 - Collapsible sections grouped by resource type
 - Two diff viewing modes:
   - Standard unified diff view
-  - Side-by-side dual-pane comparison
+  - Side-by-side dual-pane comparison with navigation
+- **Diff Navigation**: Previous/Next buttons with editable counter to jump to specific differences
 - Character-level highlighting for modified lines
-- Interactive filters for added/removed/modified/unchanged lines
+- Interactive filters for added/removed/modified lines
 - Zoom controls for detailed inspection
 - Synchronized scrolling between panes
+- Visual highlight animation when navigating between differences
 
 ## Resource Types Compared
 
@@ -209,6 +217,30 @@ Optional (use `--include-services-ingress`):
 
 Volatile (use `--include-volatile`):
 - Pod, ReplicaSet
+
+## Performance Optimization
+
+kdiff uses parallel execution to fetch resources quickly:
+
+**Default behavior:**
+- Fetches resources in parallel using up to 10 concurrent threads
+- Clusters are queried simultaneously in two-cluster mode
+- Namespaces are queried simultaneously in single-cluster mode
+
+**Tuning parallelism:**
+```bash
+# Increase workers for large clusters with many resources
+kdiff -c1 prod -c2 staging --max-workers 20
+
+# Decrease workers if experiencing API rate limits
+kdiff -c1 prod -c2 staging --max-workers 5
+```
+
+**Performance tips:**
+- Use specific namespaces (`-n`) instead of all namespaces to reduce API calls
+- Filter resource types (`-r`) to only what you need
+- Increase `--max-workers` on powerful machines with stable network connections
+- Decrease `--max-workers` if you encounter rate limiting from the Kubernetes API
 
 ## Uninstallation
 
