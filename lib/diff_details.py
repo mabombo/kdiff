@@ -2100,8 +2100,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         
         #filterLabelAdded:hover .filter-box,
         #filterLabelRemoved:hover .filter-box,
-        #filterLabelModified:hover .filter-box,
-        #filterLabelUnchanged:hover .filter-box {{
+        #filterLabelModified:hover .filter-box {{
             transform: scale(1.1);
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }}
@@ -2339,13 +2338,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const hasAdded = diff.some(item => item.type === 'added');
             const hasRemoved = diff.some(item => item.type === 'removed');
             const hasModified = diff.some(item => item.type === 'modified');
-            const hasUnchanged = diff.some(item => item.type === 'unchanged');
             
             // Enable/disable filters based on presence
             updateFilterAvailability('added', hasAdded);
             updateFilterAvailability('removed', hasRemoved);
             updateFilterAvailability('modified', hasModified);
-            updateFilterAvailability('unchanged', hasUnchanged);
         }}
         
         function updateFilterAvailability(filterType, isAvailable) {{
@@ -2571,8 +2568,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         const sideBySideFilters = {{
             added: false,
             removed: false,
-            modified: false,
-            unchanged: false
+            modified: false
         }};
         
         function toggleSideBySideFilter(filterType) {{
@@ -2611,6 +2607,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             if (!anyFilterActive) {{
                 leftLines.forEach(line => {{ line.style.display = ''; }});
                 rightLines.forEach(line => {{ line.style.display = ''; }});
+                
+                // Reset current diff index and re-collect all diffs
+                currentDiffIndex = -1;
+                collectAllDiffs();
                 return;
             }}
             
@@ -2623,13 +2623,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 const isRemoved = line.classList.contains('removed');
                 const isModified = line.classList.contains('modified');
                 const isEmpty = line.classList.contains('empty-placeholder');
-                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
                 
                 let shouldShow = false;
                 if (isAdded && sideBySideFilters.added) shouldShow = true;
                 if (isRemoved && sideBySideFilters.removed) shouldShow = true;
                 if (isModified && sideBySideFilters.modified) shouldShow = true;
-                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
                 
                 // Show empty placeholders ONLY when added or removed filters are active
                 if (isEmpty && showEmptyLines) {{
@@ -2644,13 +2642,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 const isRemoved = line.classList.contains('removed');
                 const isModified = line.classList.contains('modified');
                 const isEmpty = line.classList.contains('empty-placeholder');
-                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
                 
                 let shouldShow = false;
                 if (isAdded && sideBySideFilters.added) shouldShow = true;
                 if (isRemoved && sideBySideFilters.removed) shouldShow = true;
                 if (isModified && sideBySideFilters.modified) shouldShow = true;
-                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
                 
                 // Show empty placeholders ONLY when added or removed filters are active
                 if (isEmpty && showEmptyLines) {{
@@ -2674,10 +2670,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             sideBySideFilters.added = false;
             sideBySideFilters.removed = false;
             sideBySideFilters.modified = false;
-            sideBySideFilters.unchanged = false;
             
             // Remove all checkmarks
-            ['Added', 'Removed', 'Modified', 'Unchanged'].forEach(type => {{
+            ['Added', 'Removed', 'Modified'].forEach(type => {{
                 const box = document.getElementById('filterBox' + type);
                 if (box) {{
                     box.innerHTML = '';
@@ -2823,12 +2818,6 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const leftPane = document.getElementById('sideBySideLeftPane');
             const rightPane = document.getElementById('sideBySideRightPane');
             
-            // First, ensure panes are synchronized before navigating
-            // Use the current scroll position as baseline
-            const currentScroll = Math.max(leftPane.scrollTop, rightPane.scrollTop);
-            leftPane.scrollTop = currentScroll;
-            rightPane.scrollTop = currentScroll;
-            
             // Remove previous highlight
             document.querySelectorAll('.code-line.navigated').forEach(line => {{
                 line.classList.remove('navigated');
@@ -2849,29 +2838,44 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                      (diff.leftElement || diff.rightElement);
             if (!referenceElement) return;
             
-            // Force a reflow to get accurate offsetTop after synchronization
-            leftPane.offsetHeight;
-            rightPane.offsetHeight;
-            
+            // Get the exact position before scrolling
             const lineOffset = referenceElement.offsetTop;
             const paneHeight = leftPane.clientHeight;
             const lineHeight = referenceElement.clientHeight;
-            const targetScroll = lineOffset - (paneHeight / 2) + (lineHeight / 2);
+            const targetScroll = Math.max(0, lineOffset - (paneHeight / 2) + (lineHeight / 2));
             
-            // Disable sync temporarily to avoid conflicts during smooth scroll
-            const leftPaneClone = leftPane.cloneNode(false);
-            const rightPaneClone = rightPane.cloneNode(false);
+            // For large scroll distances (wraparound), do instant scroll first then smooth to exact position
+            const currentScroll = leftPane.scrollTop;
+            const scrollDistance = Math.abs(targetScroll - currentScroll);
+            const isLargeJump = scrollDistance > paneHeight * 2;
             
-            // Smooth scroll both panes synchronously
-            leftPane.scrollTo({{
-                top: targetScroll,
-                behavior: 'smooth'
-            }});
-            
-            rightPane.scrollTo({{
-                top: targetScroll,
-                behavior: 'smooth'
-            }});
+            if (isLargeJump) {{
+                // Instant scroll to approximate position first
+                leftPane.scrollTop = targetScroll;
+                rightPane.scrollTop = targetScroll;
+                
+                // Then use smooth scroll to fine-tune (small adjustment)
+                setTimeout(() => {{
+                    leftPane.scrollTo({{
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    }});
+                    rightPane.scrollTo({{
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    }});
+                }}, 50);
+            }} else {{
+                // Normal smooth scroll for nearby diffs
+                leftPane.scrollTo({{
+                    top: targetScroll,
+                    behavior: 'smooth'
+                }});
+                rightPane.scrollTo({{
+                    top: targetScroll,
+                    behavior: 'smooth'
+                }});
+            }}
             
             // Update counter
             updateDiffCounter();
@@ -3357,12 +3361,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #93c5fd; border-radius: 3px; position: relative;"></div>
                         <span style="color: #3b82f6;">Modified</span>
                     </div>
-                    <div onclick="toggleSideBySideFilter('unchanged')" id="filterLabelUnchanged" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxUnchanged" style="width: 20px; height: 20px; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #475569;">Unchanged</span>
-                    </div>
                     <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
-                        Reset Filters
+                        Clear Filters
                     </button>
                 </div>
             </div>
