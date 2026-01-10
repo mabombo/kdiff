@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 
 LABEL maintainer="Mauro Casiraghi"
 LABEL description="kdiff - Kubernetes cluster comparison tool"
-LABEL version="1.5.6"
+LABEL version="1.5.8"
 
 # Upgrade pip to latest version to fix security vulnerabilities
 RUN pip install --no-cache-dir --upgrade pip
@@ -29,9 +29,10 @@ RUN addgroup -g 1000 kdiff && \
 # Set working directory
 WORKDIR /app
 
-# Copy kdiff files
+# Copy kdiff files (including kdiff_cli.py required by bin/kdiff)
+COPY --chown=kdiff:kdiff kdiff_cli.py /app/kdiff_cli.py
 COPY --chown=kdiff:kdiff bin/kdiff /usr/local/bin/kdiff
-COPY --chown=kdiff:kdiff lib/ /usr/local/lib/
+COPY --chown=kdiff:kdiff lib/ /app/lib/
 COPY --chown=kdiff:kdiff docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Make kdiff and entrypoint executable
