@@ -1914,6 +1914,49 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             background: rgba(255,255,255,0.3);
         }}
         
+        .diff-navigation {{
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+        }}
+        
+        .nav-btn {{
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }}
+        
+        .nav-btn:hover {{
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }}
+        
+        .nav-btn:active {{
+            transform: translateY(0);
+        }}
+        
+        .nav-btn:disabled {{
+            opacity: 0.4;
+            cursor: not-allowed;
+        }}
+        
+        .nav-btn:disabled:hover {{
+            background: rgba(255,255,255,0.2);
+            transform: none;
+        }}
+        
         .sidebyside-container {{
             display: flex;
             flex-direction: row;
@@ -2013,6 +2056,21 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         
         .code-line.modified .code-line-content {{
             background: rgba(59, 130, 246, 0.25);
+        }}
+        
+        .code-line.navigated {{
+            animation: highlightDiff 1.5s ease-out;
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.6);
+        }}
+        
+        @keyframes highlightDiff {{
+            0% {{
+                background: rgba(250, 204, 21, 0.5);
+                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.8);
+            }}
+            100% {{
+                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0);
+            }}
         }}
         
         /* Inline diff highlighting within modified lines */
@@ -2258,6 +2316,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             // Sync scrolling between panes
             syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
+            
+            // Initialize diff navigation
+            initializeDiffNavigation();
             
             modal.style.display = 'block';
         }}
@@ -2587,6 +2648,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 
                 line.style.display = shouldShow ? '' : 'none';
             }});
+            
+            // Re-collect diffs after filter changes
+            collectAllDiffs();
         }}
         
         function resetSideBySideFilter() {{
@@ -2607,6 +2671,136 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             // Apply filter (will show all lines since no filter is active)
             applySideBySideFilter();
+        }}
+        
+        // ========================================
+        // DIFF NAVIGATION - Navigate between differences
+        // ========================================
+        
+        let currentDiffIndex = -1;
+        let allDiffs = [];
+        
+        function collectAllDiffs() {{
+            // Collect all visible diff lines (added, removed, modified) from both panes
+            allDiffs = [];
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            if (!leftPane || !rightPane) return;
+            
+            const leftLines = leftPane.querySelectorAll('.code-line.added, .code-line.removed, .code-line.modified');
+            const rightLines = rightPane.querySelectorAll('.code-line.added, .code-line.removed, .code-line.modified');
+            
+            // Merge and sort by position
+            const leftDiffs = Array.from(leftLines).map(line => ({{
+                element: line,
+                position: line.offsetTop,
+                pane: 'left'
+            }}));
+            
+            const rightDiffs = Array.from(rightLines).map(line => ({{
+                element: line,
+                position: line.offsetTop,
+                pane: 'right'
+            }}));
+            
+            // Combine and sort by vertical position
+            allDiffs = [...leftDiffs, ...rightDiffs].sort((a, b) => a.position - b.position);
+            
+            // Remove duplicates (lines at same position)
+            const uniqueDiffs = [];
+            let lastPosition = -1;
+            for (const diff of allDiffs) {{
+                if (diff.position !== lastPosition) {{
+                    uniqueDiffs.push(diff);
+                    lastPosition = diff.position;
+                }}
+            }}
+            allDiffs = uniqueDiffs;
+            
+            // Update counter
+            updateDiffCounter();
+        }}
+        
+        function updateDiffCounter() {{
+            const counter = document.getElementById('diffCounter');
+            if (counter) {{
+                const total = allDiffs.length;
+                const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
+                counter.textContent = `${{current}} / ${{total}}`;
+            }}
+        }}
+        
+        function navigateToNextDiff() {{
+            if (allDiffs.length === 0) {{
+                collectAllDiffs();
+            }}
+            
+            if (allDiffs.length === 0) return;
+            
+            // Move to next diff
+            currentDiffIndex = (currentDiffIndex + 1) % allDiffs.length;
+            scrollToDiff(allDiffs[currentDiffIndex]);
+        }}
+        
+        function navigateToPreviousDiff() {{
+            if (allDiffs.length === 0) {{
+                collectAllDiffs();
+            }}
+            
+            if (allDiffs.length === 0) return;
+            
+            // Move to previous diff
+            currentDiffIndex = currentDiffIndex <= 0 ? allDiffs.length - 1 : currentDiffIndex - 1;
+            scrollToDiff(allDiffs[currentDiffIndex]);
+        }}
+        
+        function scrollToDiff(diff) {{
+            if (!diff) return;
+            
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            // Remove previous highlight
+            document.querySelectorAll('.code-line.navigated').forEach(line => {{
+                line.classList.remove('navigated');
+            }});
+            
+            // Add highlight to current diff
+            diff.element.classList.add('navigated');
+            
+            // Calculate target scroll position to center the line
+            const pane = diff.pane === 'left' ? leftPane : rightPane;
+            const lineOffset = diff.element.offsetTop;
+            const paneHeight = pane.clientHeight;
+            const lineHeight = diff.element.clientHeight;
+            const targetScroll = lineOffset - (paneHeight / 2) + (lineHeight / 2);
+            
+            // Smooth scroll both panes synchronously
+            leftPane.scrollTo({{
+                top: targetScroll,
+                behavior: 'smooth'
+            }});
+            
+            rightPane.scrollTo({{
+                top: targetScroll,
+                behavior: 'smooth'
+            }});
+            
+            // Update counter
+            updateDiffCounter();
+            
+            // Remove highlight after animation
+            setTimeout(() => {{
+                diff.element.classList.remove('navigated');
+            }}, 1500);
+        }}
+        
+        // Initialize diff collection when side-by-side modal is opened
+        function initializeDiffNavigation() {{
+            currentDiffIndex = -1;
+            allDiffs = [];
+            collectAllDiffs();
         }}
         
         function syncPaneScrolling(leftPaneId, rightPaneId) {{
@@ -3021,6 +3215,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <div class="sidebyside-modal-header">
                 <h2 id="sideBySideModalTitle" style="margin: 0; font-size: 1.3em;"></h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="diff-navigation">
+                        <button class="nav-btn" onclick="navigateToPreviousDiff()" title="Previous Difference (↑)">
+                            <span style="font-size: 1.2em;">↑</span> Prev
+                        </button>
+                        <span id="diffCounter" style="margin: 0 10px; color: #64748b; font-size: 0.9em; min-width: 60px; text-align: center;">0 / 0</span>
+                        <button class="nav-btn" onclick="navigateToNextDiff()" title="Next Difference (↓)">
+                            Next <span style="font-size: 1.2em;">↓</span>
+                        </button>
+                    </div>
                     <div class="zoom-controls">
                         <button class="zoom-btn" onclick="zoomOutSideBySide()" title="Zoom Out">−</button>
                         <button class="zoom-btn" onclick="resetZoomSideBySide()" title="Reset Zoom">⟲</button>
