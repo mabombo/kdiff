@@ -17,7 +17,7 @@ import importlib.util
 # Version
 __version__ = "1.5.6"
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 LIB = ROOT / 'lib'
 
 # Default resources
