@@ -2660,6 +2660,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 line.style.display = shouldShow ? '' : 'none';
             }});
             
+            // Reset current diff index if it's out of range after filtering
+            if (currentDiffIndex >= 0) {{
+                currentDiffIndex = -1;
+            }}
+            
             // Re-collect diffs after filter changes
             collectAllDiffs();
         }}
@@ -2747,8 +2752,12 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 const totalDiffs = allDiffs.length;
                 const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
                 
-                input.value = current;
-                total.textContent = totalDiffs;
+                // Force update input value
+                input.value = String(current);
+                total.textContent = String(totalDiffs);
+                
+                // Also update input attribute for debugging
+                input.setAttribute('data-total', totalDiffs);
             }}
         }}
         
