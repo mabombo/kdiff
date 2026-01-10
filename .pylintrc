@@ -1,0 +1,20 @@
+[MASTER]
+ignore=__pycache__,tests
+disable=
+    C0114,  # missing-module-docstring
+    C0116,  # missing-function-docstring
+    R0913,  # too-many-arguments
+    R0912,  # too-many-branches
+    R0915,  # too-many-statements
+    W0511,  # fixme
+    C0301,  # line-too-long (gestito da black)
+
+[FORMAT]
+max-line-length=120
+
+[DESIGN]
+max-args=10
+max-locals=25
+
+[BASIC]
+good-names=i,j,k,v,f,p,df,ax,ex,_

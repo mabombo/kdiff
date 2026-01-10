@@ -22,6 +22,7 @@ Compare Kubernetes resources between clusters using Docker.
 
 ```bash
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -45,6 +46,7 @@ chmod +x kdiff-docker
 ### Compare entire namespaces
 ```bash
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -54,6 +56,7 @@ docker run --rm -it \
 ### Compare specific resource types
 ```bash
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -64,6 +67,7 @@ docker run --rm -it \
 ### Include services and ingress resources
 ```bash
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -74,6 +78,7 @@ docker run --rm -it \
 ### Show full metadata in diffs
 ```bash
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -165,6 +170,7 @@ chmod 644 ~/.kube/config
 
 # Then run kdiff normally
 docker run --rm -it \
+  --pull always \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -175,6 +181,7 @@ docker run --rm -it \
 ```bash
 # Run container with your user ID (most reliable method)
 docker run --rm -it \
+  --pull always \
   --user $(id -u):$(id -g) \
   -v ~/.kube/config:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
@@ -190,6 +197,7 @@ chmod 644 /tmp/kube-config-kdiff
 
 # Mount the temporary file
 docker run --rm -it \
+  --pull always \
   -v /tmp/kube-config-kdiff:/home/kdiff/.kube/config:ro \
   -v $(pwd)/kdiff_output:/app/kdiff_output \
   mabombo/kdiff:latest \
@@ -215,6 +223,7 @@ If you see errors about contexts not existing:
 2. Use the exact context name from the list:
    ```bash
    docker run --rm -it \
+     --pull always \
      -v ~/.kube/config:/home/kdiff/.kube/config:ro \
      -v $(pwd)/kdiff_output:/app/kdiff_output \
      mabombo/kdiff:latest \

@@ -35,7 +35,26 @@ ALL_SUPPORTED_RESOURCES = RESOURCES + VOLATILE_RESOURCES + SERVICE_INGRESS_RESOU
 GREEN = '\033[0;32m'
 YELLOW = '\033[0;33m'
 RED = '\033[0;31m'
+CYAN = '\033[0;36m'
 RESET = '\033[0m'
+
+
+def print_banner():
+    """Print kdiff ASCII banner with version."""
+    banner = f"""
+╔══════════════════════════════════════════╗
+║                                          ║
+║   _  _____ ___ ___ ___                   ║
+║  | |/ /   \\_ _| __| __|                  ║
+║  | ' <| |) | || _|| _|                   ║
+║  |_|\\_\\___/___|_| |_|                    ║
+║                                          ║
+║  Kubernetes Cluster Comparison Tool      ║
+║  Version: {__version__:<30} ║
+║                                          ║
+╚══════════════════════════════════════════╝
+"""
+    print(f"{CYAN}{banner}{RESET}", flush=True)
 
 
 def check_deps():
@@ -315,10 +334,26 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
     return True
 
 
+class VersionAction(argparse.Action):
+    """Custom action to show banner with version."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        print_banner()
+        parser.exit()
+
+
+class HelpAction(argparse.Action):
+    """Custom action to show banner with help."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        print_banner()
+        parser.print_help()
+        parser.exit()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='kdiff — Compare Kubernetes resources between two clusters or multiple namespaces',
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable default -h/--help to use custom action
         epilog='''
 Examples:
   # Two-cluster mode: Compare all default resources between two clusters
@@ -359,10 +394,17 @@ Default resources compared:
   serviceaccount, role, rolebinding, horizontalpodautoscaler, cronjob, job
         ''')
     
-    # Add version argument
+    # Add custom help argument
+    parser.add_argument('-h', '--help',
+                       action=HelpAction,
+                       nargs=0,
+                       help='show this help message and exit')
+    
+    # Add custom version argument
     parser.add_argument('-v', '--version',
-                       action='version',
-                       version=f'kdiff {__version__}')
+                       action=VersionAction,
+                       nargs=0,
+                       help='show program version and exit')
     
     parser.add_argument('-c1', 
                        metavar='CONTEXT1',
@@ -417,6 +459,9 @@ Default resources compared:
                        help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
     
     args = parser.parse_args()
+
+    # Print banner
+    print_banner()
 
     # Validate arguments and determine mode
     single_cluster_mode = False
