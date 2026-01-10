@@ -40,6 +40,10 @@ import html as html_lib
 import datetime
 import typing
 
+# Import version from parent package
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from lib import __version__
+
 
 # ============================================
 # UTILITY FUNCTIONS - Manipolazione Dati
@@ -1910,6 +1914,60 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             background: rgba(255,255,255,0.3);
         }}
         
+        .diff-navigation {{
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+        }}
+        
+        .nav-btn {{
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }}
+        
+        .nav-btn:hover {{
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }}
+        
+        .nav-btn:active {{
+            transform: translateY(0);
+        }}
+        
+        .nav-btn:disabled {{
+            opacity: 0.4;
+            cursor: not-allowed;
+        }}
+        
+        .nav-btn:disabled:hover {{
+            background: rgba(255,255,255,0.2);
+            transform: none;
+        }}
+        
+        /* Hide spinner arrows for diff counter input */
+        #diffCounterInput::-webkit-outer-spin-button,
+        #diffCounterInput::-webkit-inner-spin-button {{
+            -webkit-appearance: none;
+            margin: 0;
+        }}
+        
+        #diffCounterInput[type=number] {{
+            -moz-appearance: textfield;
+        }}
+        
         .sidebyside-container {{
             display: flex;
             flex-direction: row;
@@ -2011,6 +2069,21 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             background: rgba(59, 130, 246, 0.25);
         }}
         
+        .code-line.navigated {{
+            animation: highlightDiff 1.5s ease-out;
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.6);
+        }}
+        
+        @keyframes highlightDiff {{
+            0% {{
+                background: rgba(250, 204, 21, 0.5);
+                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.8);
+            }}
+            100% {{
+                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0);
+            }}
+        }}
+        
         /* Inline diff highlighting within modified lines */
         .inline-diff-highlight {{
             background: rgba(251, 191, 36, 0.5);
@@ -2027,8 +2100,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         
         #filterLabelAdded:hover .filter-box,
         #filterLabelRemoved:hover .filter-box,
-        #filterLabelModified:hover .filter-box,
-        #filterLabelUnchanged:hover .filter-box {{
+        #filterLabelModified:hover .filter-box {{
             transform: scale(1.1);
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }}
@@ -2255,6 +2327,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             // Sync scrolling between panes
             syncPaneScrolling('sideBySideLeftPane', 'sideBySideRightPane');
             
+            // Initialize diff navigation
+            initializeDiffNavigation();
+            
             modal.style.display = 'block';
         }}
         
@@ -2263,13 +2338,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const hasAdded = diff.some(item => item.type === 'added');
             const hasRemoved = diff.some(item => item.type === 'removed');
             const hasModified = diff.some(item => item.type === 'modified');
-            const hasUnchanged = diff.some(item => item.type === 'unchanged');
             
             // Enable/disable filters based on presence
             updateFilterAvailability('added', hasAdded);
             updateFilterAvailability('removed', hasRemoved);
             updateFilterAvailability('modified', hasModified);
-            updateFilterAvailability('unchanged', hasUnchanged);
         }}
         
         function updateFilterAvailability(filterType, isAvailable) {{
@@ -2495,8 +2568,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         const sideBySideFilters = {{
             added: false,
             removed: false,
-            modified: false,
-            unchanged: false
+            modified: false
         }};
         
         function toggleSideBySideFilter(filterType) {{
@@ -2535,6 +2607,10 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             if (!anyFilterActive) {{
                 leftLines.forEach(line => {{ line.style.display = ''; }});
                 rightLines.forEach(line => {{ line.style.display = ''; }});
+                
+                // Reset current diff index and re-collect all diffs
+                currentDiffIndex = -1;
+                collectAllDiffs();
                 return;
             }}
             
@@ -2547,13 +2623,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 const isRemoved = line.classList.contains('removed');
                 const isModified = line.classList.contains('modified');
                 const isEmpty = line.classList.contains('empty-placeholder');
-                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
                 
                 let shouldShow = false;
                 if (isAdded && sideBySideFilters.added) shouldShow = true;
                 if (isRemoved && sideBySideFilters.removed) shouldShow = true;
                 if (isModified && sideBySideFilters.modified) shouldShow = true;
-                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
                 
                 // Show empty placeholders ONLY when added or removed filters are active
                 if (isEmpty && showEmptyLines) {{
@@ -2568,13 +2642,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 const isRemoved = line.classList.contains('removed');
                 const isModified = line.classList.contains('modified');
                 const isEmpty = line.classList.contains('empty-placeholder');
-                const isUnchanged = !isAdded && !isRemoved && !isModified && !isEmpty;
                 
                 let shouldShow = false;
                 if (isAdded && sideBySideFilters.added) shouldShow = true;
                 if (isRemoved && sideBySideFilters.removed) shouldShow = true;
                 if (isModified && sideBySideFilters.modified) shouldShow = true;
-                if (isUnchanged && sideBySideFilters.unchanged) shouldShow = true;
                 
                 // Show empty placeholders ONLY when added or removed filters are active
                 if (isEmpty && showEmptyLines) {{
@@ -2583,6 +2655,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 
                 line.style.display = shouldShow ? '' : 'none';
             }});
+            
+            // Reset current diff index if it's out of range after filtering
+            if (currentDiffIndex >= 0) {{
+                currentDiffIndex = -1;
+            }}
+            
+            // Re-collect diffs after filter changes
+            collectAllDiffs();
         }}
         
         function resetSideBySideFilter() {{
@@ -2590,10 +2670,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             sideBySideFilters.added = false;
             sideBySideFilters.removed = false;
             sideBySideFilters.modified = false;
-            sideBySideFilters.unchanged = false;
             
             // Remove all checkmarks
-            ['Added', 'Removed', 'Modified', 'Unchanged'].forEach(type => {{
+            ['Added', 'Removed', 'Modified'].forEach(type => {{
                 const box = document.getElementById('filterBox' + type);
                 if (box) {{
                     box.innerHTML = '';
@@ -2605,18 +2684,240 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             applySideBySideFilter();
         }}
         
+        // ========================================
+        // DIFF NAVIGATION - Navigate between differences
+        // ========================================
+        
+        let currentDiffIndex = -1;
+        let allDiffs = [];
+        
+        function collectAllDiffs() {{
+            // Collect all visible diff lines (added, removed, modified) from both panes
+            // We need to collect them by line index to maintain alignment
+            allDiffs = [];
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            if (!leftPane || !rightPane) return;
+            
+            const allLeftLines = Array.from(leftPane.querySelectorAll('.code-line'));
+            const allRightLines = Array.from(rightPane.querySelectorAll('.code-line'));
+            
+            // Collect paired diff lines by index (to maintain alignment)
+            for (let i = 0; i < Math.max(allLeftLines.length, allRightLines.length); i++) {{
+                const leftLine = allLeftLines[i];
+                const rightLine = allRightLines[i];
+                
+                // Check if either line is a visible diff (not hidden by filters and not empty placeholder)
+                const leftIsDiff = leftLine && 
+                                   !leftLine.classList.contains('empty-placeholder') &&
+                                   (leftLine.classList.contains('added') || 
+                                    leftLine.classList.contains('removed') || 
+                                    leftLine.classList.contains('modified')) &&
+                                   window.getComputedStyle(leftLine).display !== 'none';
+                                   
+                const rightIsDiff = rightLine && 
+                                    !rightLine.classList.contains('empty-placeholder') &&
+                                    (rightLine.classList.contains('added') || 
+                                     rightLine.classList.contains('removed') || 
+                                     rightLine.classList.contains('modified')) &&
+                                    window.getComputedStyle(rightLine).display !== 'none';
+                
+                // Only add if at least one side has a real visible diff
+                if (leftIsDiff || rightIsDiff) {{
+                    allDiffs.push({{
+                        leftElement: leftLine,
+                        rightElement: rightLine,
+                        index: i,
+                        hasLeftDiff: leftIsDiff,
+                        hasRightDiff: rightIsDiff
+                    }});
+                }}
+            }}
+            
+            // Update counter
+            updateDiffCounter();
+        }}
+        
+        function updateDiffCounter() {{
+            const input = document.getElementById('diffCounterInput');
+            const total = document.getElementById('diffCounterTotal');
+            
+            if (input && total) {{
+                const totalDiffs = allDiffs.length;
+                const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
+                
+                // Force update input value
+                input.value = String(current);
+                total.textContent = String(totalDiffs);
+                
+                // Also update input attribute for debugging
+                input.setAttribute('data-total', totalDiffs);
+            }}
+        }}
+        
+        function handleDiffCounterKeypress(event) {{
+            // Only allow numbers and Enter key
+            if (event.key === 'Enter') {{
+                event.preventDefault();
+                handleDiffCounterChange();
+                event.target.blur();
+            }} else if (!/[0-9]/.test(event.key) && event.key !== 'Backspace' && event.key !== 'Delete' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {{
+                event.preventDefault();
+            }}
+        }}
+        
+        function handleDiffCounterChange() {{
+            const input = document.getElementById('diffCounterInput');
+            if (!input || allDiffs.length === 0) return;
+            
+            let value = parseInt(input.value);
+            
+            // Validate input
+            if (isNaN(value) || value < 1) {{
+                value = 1;
+            }} else if (value > allDiffs.length) {{
+                value = allDiffs.length;
+            }}
+            
+            // Update input with validated value
+            input.value = value;
+            
+            // Navigate to the specified diff (value is 1-based, index is 0-based)
+            currentDiffIndex = value - 1;
+            scrollToDiff(allDiffs[currentDiffIndex]);
+        }}
+        
+        function navigateToNextDiff() {{
+            if (allDiffs.length === 0) {{
+                collectAllDiffs();
+            }}
+            
+            if (allDiffs.length === 0) return;
+            
+            // Move to next diff
+            currentDiffIndex = (currentDiffIndex + 1) % allDiffs.length;
+            scrollToDiff(allDiffs[currentDiffIndex]);
+        }}
+        
+        function navigateToPreviousDiff() {{
+            if (allDiffs.length === 0) {{
+                collectAllDiffs();
+            }}
+            
+            if (allDiffs.length === 0) return;
+            
+            // Move to previous diff
+            currentDiffIndex = currentDiffIndex <= 0 ? allDiffs.length - 1 : currentDiffIndex - 1;
+            scrollToDiff(allDiffs[currentDiffIndex]);
+        }}
+        
+        function scrollToDiff(diff) {{
+            if (!diff) return;
+            
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            // Remove previous highlight
+            document.querySelectorAll('.code-line.navigated').forEach(line => {{
+                line.classList.remove('navigated');
+            }});
+            
+            // Add highlight only to elements that actually have a diff
+            if (diff.leftElement && diff.hasLeftDiff) {{
+                diff.leftElement.classList.add('navigated');
+            }}
+            if (diff.rightElement && diff.hasRightDiff) {{
+                diff.rightElement.classList.add('navigated');
+            }}
+            
+            // Calculate target scroll position to center the line
+            // Use the first available diff element as reference
+            const referenceElement = (diff.hasLeftDiff && diff.leftElement) ? diff.leftElement : 
+                                     (diff.hasRightDiff && diff.rightElement) ? diff.rightElement : 
+                                     (diff.leftElement || diff.rightElement);
+            if (!referenceElement) return;
+            
+            // Get the exact position before scrolling
+            const lineOffset = referenceElement.offsetTop;
+            const paneHeight = leftPane.clientHeight;
+            const lineHeight = referenceElement.clientHeight;
+            const targetScroll = Math.max(0, lineOffset - (paneHeight / 2) + (lineHeight / 2));
+            
+            // For large scroll distances (wraparound), do instant scroll first then smooth to exact position
+            const currentScroll = leftPane.scrollTop;
+            const scrollDistance = Math.abs(targetScroll - currentScroll);
+            const isLargeJump = scrollDistance > paneHeight * 2;
+            
+            if (isLargeJump) {{
+                // Instant scroll to approximate position first
+                leftPane.scrollTop = targetScroll;
+                rightPane.scrollTop = targetScroll;
+                
+                // Then use smooth scroll to fine-tune (small adjustment)
+                setTimeout(() => {{
+                    leftPane.scrollTo({{
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    }});
+                    rightPane.scrollTo({{
+                        top: targetScroll,
+                        behavior: 'smooth'
+                    }});
+                }}, 50);
+            }} else {{
+                // Normal smooth scroll for nearby diffs
+                leftPane.scrollTo({{
+                    top: targetScroll,
+                    behavior: 'smooth'
+                }});
+                rightPane.scrollTo({{
+                    top: targetScroll,
+                    behavior: 'smooth'
+                }});
+            }}
+            
+            // Update counter
+            updateDiffCounter();
+            
+            // Remove highlight after animation
+            setTimeout(() => {{
+                if (diff.leftElement && diff.hasLeftDiff) {{
+                    diff.leftElement.classList.remove('navigated');
+                }}
+                if (diff.rightElement && diff.hasRightDiff) {{
+                    diff.rightElement.classList.remove('navigated');
+                }}
+            }}, 1500);
+        }}
+        
+        // Initialize diff collection when side-by-side modal is opened
+        function initializeDiffNavigation() {{
+            currentDiffIndex = -1;
+            allDiffs = [];
+            collectAllDiffs();
+        }}
+        
         function syncPaneScrolling(leftPaneId, rightPaneId) {{
             const leftPane = document.getElementById(leftPaneId);
             const rightPane = document.getElementById(rightPaneId);
             
             let isLeftScrolling = false;
             let isRightScrolling = false;
+            let scrollTimeout = null;
             
             leftPane.addEventListener('scroll', function() {{
                 if (!isRightScrolling) {{
                     isLeftScrolling = true;
                     rightPane.scrollTop = leftPane.scrollTop;
-                    setTimeout(() => {{ isLeftScrolling = false; }}, 10);
+                    
+                    // Clear previous timeout
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    
+                    // Reset flag after scroll completes
+                    scrollTimeout = setTimeout(() => {{ 
+                        isLeftScrolling = false;
+                    }}, 50);
                 }}
             }});
             
@@ -2624,7 +2925,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 if (!isLeftScrolling) {{
                     isRightScrolling = true;
                     leftPane.scrollTop = rightPane.scrollTop;
-                    setTimeout(() => {{ isRightScrolling = false; }}, 10);
+                    
+                    // Clear previous timeout
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    
+                    // Reset flag after scroll completes
+                    scrollTimeout = setTimeout(() => {{ 
+                        isRightScrolling = false;
+                    }}, 50);
                 }}
             }});
         }}
@@ -2972,7 +3280,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         </div>
         
         <div class="footer">
-            <p>Generated by <strong>kdiff</strong> - Kubernetes Cluster Comparison Tool</p>
+            <p>Generated by <strong>kdiff v{__version__}</strong> - Kubernetes Cluster Comparison Tool</p>
         </div>
     </div>
     
@@ -3017,6 +3325,19 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <div class="sidebyside-modal-header">
                 <h2 id="sideBySideModalTitle" style="margin: 0; font-size: 1.3em;"></h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="diff-navigation">
+                        <button class="nav-btn" onclick="navigateToPreviousDiff()" title="Previous Difference (↑)">
+                            <span style="font-size: 1.2em;">↑</span> Prev
+                        </button>
+                        <div style="margin: 0 10px; color: #1e293b; font-size: 1em; font-weight: 600; min-width: 80px; text-align: center; display: flex; align-items: center; gap: 5px;">
+                            <input type="text" id="diffCounterInput" style="width: 45px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 1em; font-weight: 600; color: #1e293b;" onkeypress="handleDiffCounterKeypress(event)" onblur="handleDiffCounterChange()" title="Jump to difference">
+                            <span>/</span>
+                            <span id="diffCounterTotal" style="min-width: 30px;">0</span>
+                        </div>
+                        <button class="nav-btn" onclick="navigateToNextDiff()" title="Next Difference (↓)">
+                            Next <span style="font-size: 1.2em;">↓</span>
+                        </button>
+                    </div>
                     <div class="zoom-controls">
                         <button class="zoom-btn" onclick="zoomOutSideBySide()" title="Zoom Out">−</button>
                         <button class="zoom-btn" onclick="resetZoomSideBySide()" title="Reset Zoom">⟲</button>
@@ -3040,12 +3361,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #93c5fd; border-radius: 3px; position: relative;"></div>
                         <span style="color: #3b82f6;">Modified</span>
                     </div>
-                    <div onclick="toggleSideBySideFilter('unchanged')" id="filterLabelUnchanged" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxUnchanged" style="width: 20px; height: 20px; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #475569;">Unchanged</span>
-                    </div>
                     <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
-                        Reset Filters
+                        Clear Filters
                     </button>
                 </div>
             </div>

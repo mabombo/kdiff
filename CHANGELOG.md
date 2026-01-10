@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-01-10
+
+### Added
+- **Diff Navigation in Side-by-Side View**: Interactive navigation between differences
+  * Added Previous/Next navigation buttons in side-by-side modal header
+  * Editable diff counter showing "X / Y" for direct navigation to specific difference
+  * Smooth scrolling that centers target difference in viewport
+  * Visual highlight animation (yellow glow for 1.5 seconds) when navigating
+  * Synchronized scrolling between left and right panes
+  * Wraparound support (last diff → first diff with optimized scrolling)
+  * Counter updates dynamically when filters are applied/removed
+  * Only navigates to visible differences (respects filter settings)
+  * Keyboard input validation (numbers only in counter field)
+
+### Changed
+- **Filter UI Improvements**: Simplified filter interface
+  * Removed "Unchanged" filter from side-by-side view
+  * Renamed "Reset Filters" button to "Clear Filters"
+  * Updated filter logic to only handle Added, Removed, and Modified types
+
+### Fixed
+- **Filter Counter Synchronization**: Fixed diff counter not updating correctly
+  * Counter now properly recounts when filters are enabled
+  * Counter resets to full count when all filters are removed
+  * Fixed navigation after manual scrolling by user
+  * Improved centering accuracy during wraparound navigation
+
 ## [1.5.9] - 2026-01-10
 
 ### Fixed
