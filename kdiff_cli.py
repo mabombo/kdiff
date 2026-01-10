@@ -334,10 +334,26 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
     return True
 
 
+class VersionAction(argparse.Action):
+    """Custom action to show banner with version."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        print_banner()
+        parser.exit()
+
+
+class HelpAction(argparse.Action):
+    """Custom action to show banner with help."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        print_banner()
+        parser.print_help()
+        parser.exit()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='kdiff — Compare Kubernetes resources between two clusters or multiple namespaces',
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,  # Disable default -h/--help to use custom action
         epilog='''
 Examples:
   # Two-cluster mode: Compare all default resources between two clusters
@@ -378,10 +394,17 @@ Default resources compared:
   serviceaccount, role, rolebinding, horizontalpodautoscaler, cronjob, job
         ''')
     
-    # Add version argument
+    # Add custom help argument
+    parser.add_argument('-h', '--help',
+                       action=HelpAction,
+                       nargs=0,
+                       help='show this help message and exit')
+    
+    # Add custom version argument
     parser.add_argument('-v', '--version',
-                       action='version',
-                       version=f'kdiff {__version__}')
+                       action=VersionAction,
+                       nargs=0,
+                       help='show program version and exit')
     
     parser.add_argument('-c1', 
                        metavar='CONTEXT1',
