@@ -14,8 +14,8 @@ from pathlib import Path
 from datetime import datetime
 import importlib.util
 
-# Version
-__version__ = "1.5.7"
+# Import version from lib package
+from lib import __version__
 
 ROOT = Path(__file__).resolve().parent
 LIB = ROOT / 'lib'
