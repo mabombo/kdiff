@@ -2682,41 +2682,49 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         
         function collectAllDiffs() {{
             // Collect all visible diff lines (added, removed, modified) from both panes
+            // We need to collect them by line index to maintain alignment
             allDiffs = [];
             const leftPane = document.getElementById('sideBySideLeftPane');
             const rightPane = document.getElementById('sideBySideRightPane');
             
             if (!leftPane || !rightPane) return;
             
-            const leftLines = leftPane.querySelectorAll('.code-line.added, .code-line.removed, .code-line.modified');
-            const rightLines = rightPane.querySelectorAll('.code-line.added, .code-line.removed, .code-line.modified');
+            const allLeftLines = Array.from(leftPane.querySelectorAll('.code-line'));
+            const allRightLines = Array.from(rightPane.querySelectorAll('.code-line'));
             
-            // Merge and sort by position
-            const leftDiffs = Array.from(leftLines).map(line => ({{
-                element: line,
-                position: line.offsetTop,
-                pane: 'left'
-            }}));
-            
-            const rightDiffs = Array.from(rightLines).map(line => ({{
-                element: line,
-                position: line.offsetTop,
-                pane: 'right'
-            }}));
-            
-            // Combine and sort by vertical position
-            allDiffs = [...leftDiffs, ...rightDiffs].sort((a, b) => a.position - b.position);
-            
-            // Remove duplicates (lines at same position)
-            const uniqueDiffs = [];
-            let lastPosition = -1;
-            for (const diff of allDiffs) {{
-                if (diff.position !== lastPosition) {{
-                    uniqueDiffs.push(diff);
-                    lastPosition = diff.position;
+            // Collect paired diff lines by index (to maintain alignment)
+            for (let i = 0; i < Math.max(allLeftLines.length, allRightLines.length); i++) {{
+                const leftLine = allLeftLines[i];
+                const rightLine = allRightLines[i];
+                
+                // Check if either line is a visible diff (not hidden by filters and not empty placeholder)
+                const leftIsDiff = leftLine && 
+                                   !leftLine.classList.contains('empty-placeholder') &&
+                                   (leftLine.classList.contains('added') || 
+                                    leftLine.classList.contains('removed') || 
+                                    leftLine.classList.contains('modified')) &&
+                                   leftLine.style.display !== 'none' &&
+                                   leftLine.offsetParent !== null;
+                                   
+                const rightIsDiff = rightLine && 
+                                    !rightLine.classList.contains('empty-placeholder') &&
+                                    (rightLine.classList.contains('added') || 
+                                     rightLine.classList.contains('removed') || 
+                                     rightLine.classList.contains('modified')) &&
+                                    rightLine.style.display !== 'none' &&
+                                    rightLine.offsetParent !== null;
+                
+                // Only add if at least one side has a real visible diff
+                if (leftIsDiff || rightIsDiff) {{
+                    allDiffs.push({{
+                        leftElement: leftLine,
+                        rightElement: rightLine,
+                        index: i,
+                        hasLeftDiff: leftIsDiff,
+                        hasRightDiff: rightIsDiff
+                    }});
                 }}
             }}
-            allDiffs = uniqueDiffs;
             
             // Update counter
             updateDiffCounter();
@@ -2766,14 +2774,24 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 line.classList.remove('navigated');
             }});
             
-            // Add highlight to current diff
-            diff.element.classList.add('navigated');
+            // Add highlight only to elements that actually have a diff
+            if (diff.leftElement && diff.hasLeftDiff) {{
+                diff.leftElement.classList.add('navigated');
+            }}
+            if (diff.rightElement && diff.hasRightDiff) {{
+                diff.rightElement.classList.add('navigated');
+            }}
             
             // Calculate target scroll position to center the line
-            const pane = diff.pane === 'left' ? leftPane : rightPane;
-            const lineOffset = diff.element.offsetTop;
-            const paneHeight = pane.clientHeight;
-            const lineHeight = diff.element.clientHeight;
+            // Use the first available diff element as reference
+            const referenceElement = (diff.hasLeftDiff && diff.leftElement) ? diff.leftElement : 
+                                     (diff.hasRightDiff && diff.rightElement) ? diff.rightElement : 
+                                     (diff.leftElement || diff.rightElement);
+            if (!referenceElement) return;
+            
+            const lineOffset = referenceElement.offsetTop;
+            const paneHeight = leftPane.clientHeight;
+            const lineHeight = referenceElement.clientHeight;
             const targetScroll = lineOffset - (paneHeight / 2) + (lineHeight / 2);
             
             // Smooth scroll both panes synchronously
@@ -2792,7 +2810,12 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             // Remove highlight after animation
             setTimeout(() => {{
-                diff.element.classList.remove('navigated');
+                if (diff.leftElement && diff.hasLeftDiff) {{
+                    diff.leftElement.classList.remove('navigated');
+                }}
+                if (diff.rightElement && diff.hasRightDiff) {{
+                    diff.rightElement.classList.remove('navigated');
+                }}
             }}, 1500);
         }}
         
