@@ -17,7 +17,7 @@ import importlib.util
 # Version
 __version__ = "1.5.6"
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 LIB = ROOT / 'lib'
 
 # Default resources
@@ -49,7 +49,7 @@ def print_banner():
 ║  | ' <| |) | || _|| _|                   ║
 ║  |_|\\_\\___/___|_| |_|                    ║
 ║                                          ║
-║  Kubernetes Cluster Comparison Tool     ║
+║  Kubernetes Cluster Comparison Tool      ║
 ║  Version: {__version__:<30} ║
 ║                                          ║
 ╚══════════════════════════════════════════╝

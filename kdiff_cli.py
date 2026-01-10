@@ -49,7 +49,7 @@ def print_banner():
 ║  | ' <| |) | || _|| _|                   ║
 ║  |_|\\_\\___/___|_| |_|                    ║
 ║                                          ║
-║  Kubernetes Cluster Comparison Tool     ║
+║  Kubernetes Cluster Comparison Tool      ║
 ║  Version: {__version__:<30} ║
 ║                                          ║
 ╚══════════════════════════════════════════╝
