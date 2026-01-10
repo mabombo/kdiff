@@ -1,3 +1,117 @@
+# kdiff v1.6.0 - Enhanced Diff Navigation and Filter Improvements
+
+## Overview
+
+Version 1.6.0 introduces a powerful navigation system for the side-by-side diff viewer, making it significantly easier to review and navigate through differences in large Kubernetes resource comparisons.
+
+## 🎯 Major Features
+
+### Interactive Diff Navigation
+
+**New Navigation Controls:** Side-by-side diff modal now includes intuitive navigation buttons:
+- **Previous/Next Buttons:** Navigate sequentially through all differences
+- **Editable Counter:** Jump directly to any specific difference by typing its number
+- **Current Position Display:** Shows "X / Y" format (e.g., "5 / 23")
+- **Wraparound Support:** Seamlessly cycles from last to first difference
+
+**Smart Scrolling Behavior:**
+- Smooth scrolling for nearby differences (enhanced UX)
+- Instant scrolling for large jumps (e.g., wraparound from diff 50 to diff 1)
+- Automatic centering of target difference in viewport
+- Synchronized scrolling between left and right panes
+- Visual highlight (yellow glow animation) for 1.5 seconds on navigation
+
+**Filter Integration:**
+- Navigation respects active filters (Added, Removed, Modified)
+- Counter dynamically updates when filters are toggled
+- Only navigates through visible differences
+- Maintains alignment between left and right panes
+
+### Keyboard Support
+
+**Editable Counter Field:**
+- Click counter to type any difference number (1 to total)
+- Press Enter to jump to specified difference
+- Numeric input validation (only accepts digits)
+- Arrow keys for easy editing
+
+### Filter UI Improvements
+
+**Streamlined Interface:**
+- Removed "Unchanged" filter (rarely used in practice)
+- Renamed "Reset Filters" → "Clear Filters" for clarity
+- Cleaner, more focused filter options
+
+## 📋 Technical Details
+
+### Navigation Implementation
+- Collects diffs by line index for perfect alignment
+- Uses `getComputedStyle()` for reliable visibility checking
+- Tracks both left and right pane differences independently
+- Re-collects diffs when filters change
+
+### Performance Optimizations
+- Instant scroll for jumps > 2 viewports
+- Smooth scroll with fine-tuning for nearby navigation
+- Efficient diff collection (excludes hidden/placeholder elements)
+
+## 🐛 Bug Fixes
+
+- Fixed diff counter not updating when filters changed
+- Fixed alignment issues between left and right panes
+- Fixed navigation breaking after manual scrolling
+- Improved wraparound centering accuracy
+- Fixed counter visibility (better contrast)
+
+## 💡 Use Cases
+
+**Large Resource Comparisons:**
+```bash
+# Compare production vs staging namespaces with many differences
+kdiff -c prod-cluster,staging-cluster -n app-namespace
+
+# Open side-by-side view for any resource
+# Use Previous/Next to review each difference
+# Filter by type (Added/Removed/Modified)
+# Jump to specific diff using counter
+```
+
+**Multi-Namespace Reviews:**
+```bash
+# Review differences across multiple namespaces
+kdiff -c REEVO-BMW-PROD -n connect,default,kube-system
+
+# Navigate through hundreds of differences efficiently
+# Focus on specific change types with filters
+```
+
+## 🔄 Migration Notes
+
+- No breaking changes
+- Navigation feature automatically available in all HTML reports
+- Existing reports remain functional
+- No configuration changes required
+
+## 📦 Docker Image
+
+```bash
+# Pull latest version
+docker pull mabombo/kdiff:1.6.0
+docker pull mabombo/kdiff:latest
+
+# Run with navigation features
+docker run --rm -v ~/.kube:/root/.kube \
+  mabombo/kdiff:1.6.0 \
+  -c prod-cluster,staging-cluster \
+  -n default -o /data/output
+```
+
+## 📝 Full Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+
+---
+
 # kdiff v1.5.6 - Namespace-Scoped Connectivity Fix
 
 ## Critical Fix

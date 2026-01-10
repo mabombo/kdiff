@@ -251,4 +251,4 @@ For issues, questions, or contributions, please visit:
 
 ## Version
 
-Current version: 1.5.3
+Current version: 1.6.0
