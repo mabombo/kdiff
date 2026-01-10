@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 # Import version from lib package
 from lib import __version__
@@ -210,9 +212,120 @@ def load_normalize_func():
     return getattr(mod, 'normalize')
 
 
-def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | str | None, show_metadata: bool = False, single_cluster_mode: bool = False):
+# dynamic import helper to load normalize.normalize
+def load_normalize_func():
+    spec = importlib.util.spec_from_file_location('normalize', str(LIB / 'normalize.py'))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore
+    return getattr(mod, 'normalize')
+
+
+def fetch_single_resource(context: str, kind: str, ns: str | None, outdir: Path, norm, show_metadata: bool, single_cluster_mode: bool, print_lock: Lock):
     """
-    Fetch resources from a Kubernetes cluster.
+    Fetch a single resource type from a Kubernetes cluster.
+    This function is designed to be called in parallel for different resource types.
+    
+    Args:
+        context: Kubernetes context name
+        kind: Resource type to fetch
+        ns: Namespace (None for all namespaces)
+        outdir: Output directory for fetched resources
+        norm: Normalize function
+        show_metadata: Whether to keep metadata in normalized output
+        single_cluster_mode: If True, exclude namespace from filename
+        print_lock: Thread lock for synchronized console output
+        
+    Returns:
+        tuple: (success: bool, resource_count: int, has_errors: bool, error_message: str | None)
+    """
+    resource_count = 0
+    has_errors = False
+    error_message = None
+    
+    try:
+        with print_lock:
+            if ns:
+                print(f"[{context}/{ns}] Fetching {kind}...")
+            else:
+                print(f"[{context}] Fetching {kind}...")
+        
+        cmd = ['kubectl', '--context', context]
+        if ns:
+            cmd += ['-n', ns, 'get', kind, '-o', 'json']
+        else:
+            cmd += ['get', kind, '--all-namespaces', '-o', 'json']
+
+        proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        if proc.returncode != 0:
+            stderr = proc.stderr.strip()
+            
+            # CRITICAL connectivity errors (terminate execution)
+            if 'does not exist' in stderr:
+                error_message = f"Context '{context}' does not exist in kubeconfig"
+                return False, 0, True, error_message
+            elif 'no such host' in stderr or 'dial tcp' in stderr:
+                error_message = f"Unable to connect to cluster '{context}'"
+                return False, 0, True, error_message
+            elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
+                error_message = f"Connection timeout to cluster '{context}'"
+                return False, 0, True, error_message
+            
+            # NON-critical errors (permissions, empty resources, etc)
+            elif 'Forbidden' in stderr or 'forbidden' in stderr:
+                ns_info = f" in namespace '{ns}'" if ns else " at cluster level"
+                with print_lock:
+                    print(f"[{context}] {RED}[ERROR]{RESET} Insufficient permissions for {kind}{ns_info}.", file=sys.stderr)
+                    if not ns:
+                        print(f"[{context}] {YELLOW}Suggestion:{RESET} Specify a namespace with -n <namespace> or --namespaces", file=sys.stderr)
+                has_errors = True
+                return True, 0, has_errors, None
+            elif stderr:
+                with print_lock:
+                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
+                has_errors = True
+                return True, 0, has_errors, None
+            else:
+                with print_lock:
+                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl returned non-zero for {kind} (exit code {proc.returncode})", file=sys.stderr)
+                has_errors = True
+                return True, 0, has_errors, None
+        
+        data = json.loads(proc.stdout) if proc.stdout.strip() else {}
+        items = data.get('items', [])
+        if not items:
+            ns_info = f" in {ns}" if ns else ""
+            with print_lock:
+                print(f"[{context}] Nessun oggetto {kind}{ns_info}.")
+            return True, 0, has_errors, None
+        
+        for item in items:
+            name = item.get('metadata', {}).get('name')
+            item_ns = item.get('metadata', {}).get('namespace')
+            # In single-cluster mode (namespace comparison), exclude namespace from filename
+            # so that the same resource in different namespaces can be matched and compared
+            if single_cluster_mode:
+                fname = f"{kind}__{name}.json"
+            elif item_ns:
+                fname = f"{kind}__{item_ns}__{name}.json"
+            else:
+                fname = f"{kind}__{name}.json"
+            path = outdir / fname
+            resource_count += 1
+            # pass show-metadata flag to the normalizer
+            n = norm(item, keep_metadata=bool(show_metadata))
+            path.write_text(json.dumps(n, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding='utf-8')
+        
+        return True, resource_count, has_errors, None
+        
+    except Exception as e:
+        with print_lock:
+            print(f"[{context}] Errore fetching {kind}: {e}", file=sys.stderr)
+        return True, 0, True, None
+
+
+def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces: list[str] | str | None, show_metadata: bool = False, single_cluster_mode: bool = False, max_workers: int = 10):
+    """
+    Fetch resources from a Kubernetes cluster using parallel threads.
     
     Args:
         context: Kubernetes context name
@@ -221,112 +334,70 @@ def fetch_resources(context: str, outdir: Path, resources: list[str], namespaces
         namespaces: None (all namespaces), string (single namespace), or list (specific namespaces)
         show_metadata: Whether to keep metadata in normalized output
         single_cluster_mode: If True, exclude namespace from filename (for namespace comparison within same cluster)
+        max_workers: Maximum number of parallel threads (default: 10)
     """
     outdir.mkdir(parents=True, exist_ok=True)
     norm = load_normalize_func()
-    has_errors = False
-    resource_count = 0
+    print_lock = Lock()
     
     # Determine namespace mode
     if namespaces is None:
         ns_list = [None]  # Fetch from all namespaces
-        ns_mode = "all"
     elif isinstance(namespaces, str):
         ns_list = [namespaces]  # Single namespace
-        ns_mode = "single"
     else:
         ns_list = namespaces  # Multiple specific namespaces
-        ns_mode = "multi"
 
+    total_resource_count = 0
+    has_any_errors = False
+    critical_error = None
+    
+    # Create tasks for parallel execution
+    tasks = []
     for kind in resources:
         for ns in ns_list:
-            if ns:
-                print(f"[{context}/{ns}] Fetching {kind}...")
-            else:
-                print(f"[{context}] Fetching {kind}...")
-                
-            cmd = ['kubectl', '--context', context]
-            if ns:
-                cmd += ['-n', ns, 'get', kind, '-o', 'json']
-            else:
-                cmd += ['get', kind, '--all-namespaces', '-o', 'json']
-
-            cmd = ['kubectl', '--context', context]
-            if ns:
-                cmd += ['-n', ns, 'get', kind, '-o', 'json']
-            else:
-                cmd += ['get', kind, '--all-namespaces', '-o', 'json']
-
-        try:
-            proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
-            if proc.returncode != 0:
-                stderr = proc.stderr.strip()
-                
-                # CRITICAL connectivity errors (terminate execution)
-                if 'does not exist' in stderr:
-                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Context '{context}' does not exist in kubeconfig", file=sys.stderr)
-                    print(f"{YELLOW}Suggestion:{RESET} Verify with 'kubectl config get-contexts'", file=sys.stderr)
-                    sys.exit(2)
-                elif 'no such host' in stderr or 'dial tcp' in stderr:
-                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Unable to connect to cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}Possible causes:{RESET}", file=sys.stderr)
-                    print(f"  - Cluster unreachable (DNS, network, firewall)", file=sys.stderr)
-                    print(f"  - VPN not active", file=sys.stderr)
-                    print(f"  - API server unavailable", file=sys.stderr)
-                    if 'no such host' in stderr:
-                        # Extract hostname from error
-                        import re
-                        hostname_match = re.search(r'lookup ([^:]+):', stderr)
-                        if hostname_match:
-                            print(f"  - Unresolvable hostname: {hostname_match.group(1)}", file=sys.stderr)
-                    sys.exit(2)
-                elif 'timeout' in stderr.lower() or 'timed out' in stderr.lower():
-                    print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Connection timeout to cluster '{context}'", file=sys.stderr)
-                    print(f"{YELLOW}Suggestion:{RESET} Check network connectivity and that cluster is active", file=sys.stderr)
-                    sys.exit(2)
-                
-                # NON-critical errors (permissions, empty resources, etc)
-                elif 'Forbidden' in stderr or 'forbidden' in stderr:
-                    ns_info = f" in namespace '{ns}'" if ns else " at cluster level"
-                    print(f"[{context}] {RED}[ERROR]{RESET} Insufficient permissions for {kind}{ns_info}.", file=sys.stderr)
-                    if not ns:
-                        print(f"[{context}] {YELLOW}Suggestion:{RESET} Specify a namespace with -n <namespace> or --namespaces", file=sys.stderr)
-                    has_errors = True
-                elif stderr:
-                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl error per {kind}: {stderr[:100]}", file=sys.stderr)
-                    has_errors = True
-                else:
-                    print(f"[{context}] {YELLOW}⚠{RESET}  kubectl returned non-zero for {kind} (exit code {proc.returncode})", file=sys.stderr)
-                    has_errors = True
-                continue
-            data = json.loads(proc.stdout) if proc.stdout.strip() else {}
-            items = data.get('items', [])
-            if not items:
-                ns_info = f" in {ns}" if ns else ""
-                print(f"[{context}] Nessun oggetto {kind}{ns_info}.")
-                continue
-            for item in items:
-                name = item.get('metadata', {}).get('name')
-                item_ns = item.get('metadata', {}).get('namespace')
-                # In single-cluster mode (namespace comparison), exclude namespace from filename
-                # so that the same resource in different namespaces can be matched and compared
-                if single_cluster_mode:
-                    fname = f"{kind}__{name}.json"
-                elif item_ns:
-                    fname = f"{kind}__{item_ns}__{name}.json"
-                else:
-                    fname = f"{kind}__{name}.json"
-                path = outdir / fname
-                resource_count += 1
-                # pass show-metadata flag to the normalizer
-                n = norm(item, keep_metadata=bool(show_metadata))
-                path.write_text(json.dumps(n, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding='utf-8')
-        except Exception as e:
-            print(f"[{context}] Errore fetching {kind}: {e}", file=sys.stderr)
-            continue
+            tasks.append((context, kind, ns, outdir, norm, show_metadata, single_cluster_mode, print_lock))
+    
+    # Execute tasks in parallel
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_single_resource, *task): task 
+            for task in tasks
+        }
+        
+        for future in as_completed(futures):
+            success, resource_count, has_errors, error_message = future.result()
+            
+            if not success and error_message:
+                # Critical error occurred
+                critical_error = error_message
+                # Cancel remaining tasks
+                for f in futures:
+                    f.cancel()
+                break
+            
+            total_resource_count += resource_count
+            if has_errors:
+                has_any_errors = True
+    
+    # Handle critical errors
+    if critical_error:
+        if 'does not exist' in critical_error:
+            print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} Context '{context}' does not exist in kubeconfig", file=sys.stderr)
+            print(f"{YELLOW}Suggestion:{RESET} Verify with 'kubectl config get-contexts'", file=sys.stderr)
+        elif 'connect' in critical_error.lower():
+            print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} {critical_error}", file=sys.stderr)
+            print(f"{YELLOW}Possible causes:{RESET}", file=sys.stderr)
+            print(f"  - Cluster unreachable (DNS, network, firewall)", file=sys.stderr)
+            print(f"  - VPN not active", file=sys.stderr)
+            print(f"  - API server unavailable", file=sys.stderr)
+        elif 'timeout' in critical_error.lower():
+            print(f"\n{RED}[ERROR] CRITICAL ERROR:{RESET} {critical_error}", file=sys.stderr)
+            print(f"{YELLOW}Suggestion:{RESET} Check network connectivity and that cluster is active", file=sys.stderr)
+        sys.exit(2)
     
     # Final check: if no resources retrieved, it could be a serious problem
-    if resource_count == 0 and has_errors:
+    if total_resource_count == 0 and has_any_errors:
         print(f"\n{RED}[WARNING]:{RESET} No resources retrieved from '{context}' due to errors.", file=sys.stderr)
         print(f"{YELLOW}Suggestion:{RESET} Resolve errors above before continuing.", file=sys.stderr)
         return False
@@ -457,6 +528,12 @@ Default resources compared:
     parser.add_argument('--show-metadata',
                        action='store_true',
                        help='Keep metadata.labels and annotations in normalized output. By default, metadata is stripped to focus on actual configuration differences')
+    
+    parser.add_argument('--max-workers',
+                       type=int,
+                       default=10,
+                       metavar='N',
+                       help='Maximum number of parallel threads for fetching resources (default: 10). Increase for faster performance with many resources, decrease if experiencing API rate limits')
     
     args = parser.parse_args()
 
@@ -616,11 +693,17 @@ Default resources compared:
             diffs = comparison_dir / 'diffs'
             json_out = comparison_dir / 'summary.json'
             
-            print(f"Fetching resources from {args.c}/{ns1}...")
-            success1 = fetch_resources(args.c, dir1, resources, ns1, args.show_metadata, single_cluster_mode=True)
+            # Parallelize fetching from both namespaces
+            print(f"Fetching resources from both namespaces in parallel...")
+            success1, success2 = False, False
             
-            print(f"Fetching resources from {args.c}/{ns2}...")
-            success2 = fetch_resources(args.c, dir2, resources, ns2, args.show_metadata, single_cluster_mode=True)
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future1 = executor.submit(fetch_resources, args.c, dir1, resources, ns1, args.show_metadata, True, args.max_workers)
+                future2 = executor.submit(fetch_resources, args.c, dir2, resources, ns2, args.show_metadata, True, args.max_workers)
+                
+                # Wait for both to complete
+                success1 = future1.result()
+                success2 = future2.result()
             
             all_successes.append((success1, success2))
             
@@ -667,14 +750,17 @@ Default resources compared:
         # Determine which namespace(s) to fetch
         ns_to_fetch = namespaces_list
 
-        print(f"Fetching resources from {args.c1}...")
-        success1 = fetch_resources(args.c1, dir1, resources, ns_to_fetch, args.show_metadata)
-
-        print(f"Fetching resources from {args.c2}...")
-        success2 = fetch_resources(args.c2, dir2, resources, ns_to_fetch, args.show_metadata)
-    
-        print(f"Fetching resources from {args.c2}...")
-        success2 = fetch_resources(args.c2, dir2, resources, ns_to_fetch, args.show_metadata)
+        # Parallelize fetching from both clusters
+        print(f"\nFetching resources from both clusters in parallel...")
+        success1, success2 = False, False
+        
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future1 = executor.submit(fetch_resources, args.c1, dir1, resources, ns_to_fetch, args.show_metadata, False, args.max_workers)
+            future2 = executor.submit(fetch_resources, args.c2, dir2, resources, ns_to_fetch, args.show_metadata, False, args.max_workers)
+            
+            # Wait for both to complete
+            success1 = future1.result()
+            success2 = future2.result()
         
         # If both clusters failed fetch, exit
         if not success1 and not success2:
