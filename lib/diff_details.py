@@ -2745,7 +2745,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             
             if (input && total) {{
                 const totalDiffs = allDiffs.length;
-                const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 0;
+                const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 1;
                 
                 // Force update input value
                 input.value = String(current);
@@ -2896,6 +2896,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             currentDiffIndex = -1;
             allDiffs = [];
             collectAllDiffs();
+            
+            // Automatically navigate to first diff if available
+            // Use setTimeout to ensure modal layout is fully rendered
+            if (allDiffs.length > 0) {{
+                setTimeout(() => {{
+                    navigateToNextDiff();
+                }}, 100);
+            }}
         }}
         
         function syncPaneScrolling(leftPaneId, rightPaneId) {{

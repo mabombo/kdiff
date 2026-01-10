@@ -1,3 +1,153 @@
+# kdiff v1.7.1 - Side-by-Side Navigation UX Improvements
+
+## Overview
+
+Version 1.7.1 enhances the side-by-side diff modal with improved navigation user experience. The modal now automatically shows the first difference and maintains consistent counter display behavior.
+
+## ✨ User Experience Improvements
+
+### Auto-Navigation to First Diff
+
+**Immediate Context on Modal Open:**
+- Modal automatically navigates to the first difference when opened
+- No need to manually click "Next" to see the first change
+- 100ms delay ensures proper layout rendering before navigation
+- Improves workflow efficiency for reviewing diffs
+
+**Before v1.7.1:**
+```
+1. Click "View Side-by-Side"
+2. Modal opens at top of file (counter shows 0/X)
+3. Click "Next" to see first diff
+```
+
+**After v1.7.1:**
+```
+1. Click "View Side-by-Side"
+2. Modal opens directly at first diff (counter shows 1/X)
+3. Immediately see the change
+```
+
+### Counter Display Consistency
+
+**Minimum Value Always 1:**
+- Counter now always displays minimum value of 1 instead of 0
+- Consistent behavior when filtering differences
+- More intuitive for users (diffs numbered 1 to N, not 0 to N-1)
+- Better alignment with user expectations
+
+### Improved First Diff Centering
+
+**Proper Viewport Positioning:**
+- First difference properly centered when modal opens
+- Fixed issue where first diff appeared at bottom of viewport
+- Better visual presentation of initial change location
+- Improved alignment between left and right panes
+
+### Navigation Highlight Color
+
+**Visual Feedback Optimization:**
+- Reverted to original yellow highlight color after user testing
+- Tested alternatives (cyan, blue) for improved visibility
+- Yellow provides best contrast with existing diff colors:
+  * Green: Added lines
+  * Red: Removed lines
+  * Yellow: Modified lines (inline diffs)
+  * Yellow highlight: Current navigation position
+
+## 🔧 Technical Implementation
+
+### JavaScript Enhancements
+
+**initializeDiffNavigation() Updates:**
+```javascript
+function initializeDiffNavigation() {
+    currentDiffIndex = -1;
+    allDiffs = [];
+    collectAllDiffs();
+    
+    // Auto-navigate to first diff if available
+    if (allDiffs.length > 0) {
+        setTimeout(() => {
+            navigateToNextDiff();
+        }, 100);
+    }
+}
+```
+
+**updateDiffCounter() Fix:**
+```javascript
+function updateDiffCounter() {
+    const current = currentDiffIndex >= 0 ? currentDiffIndex + 1 : 1;
+    // Now always shows 1 as minimum, not 0
+}
+```
+
+## 📦 Installation & Upgrade
+
+### PyPI
+```bash
+pip install --upgrade kdiff
+```
+
+### Docker
+```bash
+docker pull mabombo/kdiff:1.7.1
+# or use latest tag
+docker pull mabombo/kdiff:latest
+```
+
+## 🐛 Bug Fixes
+
+- Fixed diff counter showing 0 as minimum value
+- Fixed first diff not being centered on modal open
+- Improved layout rendering timing for auto-navigation
+
+## 🎯 Use Cases
+
+### Quick Diff Review Workflow
+
+**Scenario:** DevOps engineer reviewing differences between prod and staging
+
+**Improved Experience:**
+1. Open side-by-side modal
+2. **Automatically positioned at first difference** (NEW)
+3. Review change in context
+4. Click "Next" to move through remaining diffs
+5. Counter shows 1/15, 2/15, ... N/15 (not 0/15)
+
+### Filtered Diff Navigation
+
+**Scenario:** Focusing only on specific resource types
+
+**Improved Experience:**
+- Apply filters to show only ConfigMap diffs
+- Counter consistently shows 1/5 even with filters active
+- No confusion from 0-based indexing
+
+## 🔄 Migration Notes
+
+### From v1.7.0
+
+No breaking changes. All existing functionality preserved.
+
+**New Behaviors:**
+- Side-by-side modal auto-scrolls to first diff
+- Counter minimum value is 1 (was 0)
+- These are enhancements only - no API changes
+
+### Compatibility
+
+- Python: 3.10+
+- Kubernetes: 1.20+
+- kubectl: Must be installed and configured
+
+## 📝 Summary
+
+Version 1.7.1 is a focused UX improvement release that makes the side-by-side diff navigation more intuitive and efficient. Combined with the 5.7x performance improvement from v1.7.0, kdiff now offers both speed and excellent user experience for Kubernetes cluster comparisons.
+
+---
+
 # kdiff v1.7.0 - Parallel Execution Performance Boost
 
 ## Overview

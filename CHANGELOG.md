@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-01-11
+
+### Added
+- **Side-by-Side Modal Auto-Navigation**: Modal now automatically navigates to first difference on open
+  * Improves user experience by immediately showing relevant changes
+  * Uses 100ms delay to ensure proper layout rendering before scroll
+
+### Fixed
+- **Diff Counter Minimum Value**: Counter now always shows minimum value of 1 instead of 0
+  * Consistent behavior when filtering or with no diff selected
+  * More intuitive counter display for users
+- **First Diff Centering**: First difference now properly centered in viewport when modal opens
+  * Improved visual presentation of initial diff location
+  * Better alignment between left and right panes
+
+### Changed
+- **Navigation Highlight Color**: Reverted to original yellow color after user feedback
+  * Tested cyan and blue alternatives
+  * Yellow provides best contrast with existing diff colors
+
 ## [1.7.0] - 2026-01-10
 
 ### Added
