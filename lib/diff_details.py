@@ -2958,9 +2958,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const leftPane = document.getElementById('sideBySideLeftPane');
             const rightPane = document.getElementById('sideBySideRightPane');
             
+            if (!leftPane || !rightPane) {{
+                console.error('Side-by-side panes not found');
+                return;
+            }}
+            
             // Search in both panes
             searchInPane(leftPane, searchTerm, caseSensitive, useRegex, 'left');
             searchInPane(rightPane, searchTerm, caseSensitive, useRegex, 'right');
+            
+            console.log('Search completed. Found', searchResults.length, 'results');
             
             // Sort results by position in document
             searchResults.sort((a, b) => {{
@@ -2979,7 +2986,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         function searchInPane(pane, searchTerm, caseSensitive, useRegex, side) {{
-            const lines = pane.querySelectorAll('.line-content');
+            const lines = pane.querySelectorAll('.code-line-content');
             
             lines.forEach((line, index) => {{
                 const text = line.textContent;
@@ -3032,14 +3039,20 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         function clearSearchHighlights() {{
-            document.querySelectorAll('.search-highlight').forEach(el => {{
-                const parent = el.parentNode;
-                parent.replaceChild(document.createTextNode(el.textContent), el);
-                parent.normalize();
-            }});
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
             
-            document.querySelectorAll('.search-highlight-current').forEach(el => {{
-                el.classList.remove('search-highlight-current');
+            // Clear all search highlight marks
+            [leftPane, rightPane].forEach(pane => {{
+                if (!pane) return;
+                const highlights = pane.querySelectorAll('.search-highlight, .search-highlight-current');
+                highlights.forEach(mark => {{
+                    const parent = mark.parentNode;
+                    if (parent) {{
+                        parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                        parent.normalize();
+                    }}
+                }});
             }});
         }}
         
