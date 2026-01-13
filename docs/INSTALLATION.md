@@ -124,7 +124,7 @@ pipx install .
 #### Opzione D: --break-system-packages (NON RACCOMANDATO)
 ```bash
 pip install --break-system-packages -e .
-# ⚠️ Può danneggiare installazione Python system
+# Può danneggiare installazione Python system
 ```
 
 ---
@@ -241,9 +241,9 @@ ENTRYPOINT ["kdiff"]
 ### Supporto Windows?
 
 kdiff funziona su:
-- ✅ WSL2 (Ubuntu/Debian)
-- ✅ Git Bash (con Python Windows)
-- ⚠️ PowerShell (modifiche minori necessarie a `install.sh`)
+- WSL2 (Ubuntu/Debian)
+- Git Bash (con Python Windows)
+- PowerShell (modifiche minori necessarie a `install.sh`)
 
 ---
 
