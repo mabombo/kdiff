@@ -1,3 +1,161 @@
+# kdiff v1.7.2 - Text Search in Side-by-Side View
+
+## Overview
+
+Version 1.7.2 introduces powerful text search functionality in the side-by-side diff modal, enabling users to quickly locate specific content across both panes with real-time highlighting and navigation.
+
+## ✨ New Features
+
+### Text Search in Side-by-Side View
+
+**Interactive Search Functionality:**
+- Search input field integrated in modal toolbar
+- Real-time search with instant highlighting of matching text
+- Case-insensitive search across both left and right panes
+- Search works on all visible content in the diff view
+- Clear button to reset search and remove all highlights
+
+**Match Counter & Navigation:**
+- Visual counter showing current match and total matches (e.g., "1/5")
+- Previous/Next navigation buttons to jump between search results
+- Keyboard shortcuts support:
+  - `Enter` key for next match
+  - `Shift+Enter` for previous match
+- Automatic scroll to center matched text in viewport
+- Smooth navigation with visual feedback
+
+**Visual Highlighting:**
+- Active match highlighted with yellow background
+- All matches visible but dimmed
+- Clear visual distinction between current and other matches
+- Highlights persist during diff navigation
+- Search state maintained across filter changes
+
+**Integration with Existing Features:**
+- Works seamlessly with diff navigation (Previous/Next diff buttons)
+- Compatible with filter system (Added/Removed/Modified filters)
+- Maintains zoom level during search
+- Synchronized scrolling preserved while searching
+
+## 🐛 Bug Fixes
+
+### Search Input Selector
+- **Fixed:** Corrected querySelector to properly target search input element
+- **Impact:** Search functionality now initializes correctly on modal open
+- **Details:** Improved error handling for search-related DOM operations
+
+## 🎯 Use Cases
+
+**Finding Specific Configuration Values:**
+```
+Scenario: You need to find all occurrences of "DB_PASSWORD" in a large ConfigMap
+Action: Open side-by-side view, type "DB_PASSWORD" in search box
+Result: All 3 matches highlighted, counter shows "1/3", navigate with arrows
+```
+
+**Locating Environment Variables:**
+```
+Scenario: Check if "JAVA_OPTS" is set differently between clusters
+Action: Search for "JAVA_OPTS" in the diff
+Result: Jump directly to the line with the environment variable
+```
+
+**Reviewing API Endpoints:**
+```
+Scenario: Find all references to "/api/v2" in service configuration
+Action: Use search to highlight all endpoint references
+Result: Quickly navigate through all API paths in both versions
+```
+
+## 💡 Tips & Tricks
+
+**Efficient Searching:**
+1. Start search while modal is loading for instant results
+2. Use partial matches (e.g., "replicas" finds "spec.replicas")
+3. Combine with filters to search within specific change types
+4. Clear search to see full diff context again
+
+**Keyboard Workflow:**
+```
+1. Open side-by-side modal (click button)
+2. Focus search input (automatically focused or Tab key)
+3. Type search term
+4. Press Enter repeatedly to cycle through matches
+5. Use Shift+Enter to go backwards
+6. Press Esc or click X to clear search
+```
+
+**Best Practices:**
+- Search is case-insensitive - "password" matches "PASSWORD"
+- Use specific terms to reduce number of matches
+- Combine search with zoom for detailed inspection
+- Clear search between different lookups for clarity
+
+## 🔧 Technical Details
+
+**Search Implementation:**
+- JavaScript-based client-side search
+- No server communication required
+- Efficient text matching algorithm
+- DOM manipulation for highlighting
+- State management for active match tracking
+
+**Performance:**
+- Real-time search with no lag on large files
+- Efficient highlight rendering
+- Smooth scrolling animations
+- Minimal memory footprint
+
+## 📊 Comparison with v1.7.1
+
+| Feature | v1.7.1 | v1.7.2 |
+|---------|--------|--------|
+| Text Search | ❌ No | ✅ Yes |
+| Match Counter | ❌ No | ✅ Yes |
+| Search Navigation | ❌ No | ✅ Yes |
+| Keyboard Shortcuts | Diff nav only | Diff + Search |
+| Visual Highlighting | Diffs only | Diffs + Search |
+
+## 🚀 Getting Started
+
+**Installation:**
+```bash
+# Update to v1.7.2
+cd kdiff
+git pull
+git checkout v1.7.2
+
+# Or pull Docker image
+docker pull mabombo/kdiff:1.7.2
+```
+
+**Using Text Search:**
+```bash
+# Generate diff report
+kdiff -c1 prod-cluster -c2 staging-cluster -n myapp
+
+# Open diff-details.html in browser
+# Click "Side-by-Side" on any resource
+# Use search box at top of modal
+```
+
+## 📝 Release Notes
+
+**Version:** 1.7.2  
+**Release Date:** January 13, 2026  
+**Git Tag:** v1.7.2  
+**Changes:** 1 new feature, 1 bug fix  
+**Backward Compatibility:** Fully compatible with v1.7.x
+
+## 🔗 Resources
+
+- **Documentation:** README.md
+- **Changelog:** CHANGELOG.md  
+- **Source Code:** https://github.com/mabombo/kdiff
+- **Docker Hub:** https://hub.docker.com/r/mabombo/kdiff
+
+---
+
 # kdiff v1.7.1 - Side-by-Side Navigation UX Improvements
 
 ## Overview
