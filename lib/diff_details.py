@@ -683,11 +683,17 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         comparison_type_capitalized = "Namespace"
         entity1_label = cluster1.split("/")[-1] if "/" in cluster1 else cluster1
         entity2_label = cluster2.split("/")[-1] if "/" in cluster2 else cluster2
+        # Extract cluster name for header
+        cluster_name = cluster1.split("/")[0] if "/" in cluster1 else (cluster2.split("/")[0] if "/" in cluster2 else "")
+        # Collect all compared namespaces
+        compared_namespaces = set([entity1_label, entity2_label])
     else:
         comparison_type = "cluster"
         comparison_type_capitalized = "Cluster"
         entity1_label = cluster1
         entity2_label = cluster2
+        cluster_name = None
+        compared_namespaces = set()
     
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     
@@ -696,6 +702,9 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     # ========================================
     # Organizza risorse per tipo (Deployment, ConfigMap, etc)
     resources_by_kind = {}
+    
+    # Collect all unique namespaces for cluster comparison only
+    all_namespaces = set()
     
     for detail in details:
         base = detail['file']
@@ -723,6 +732,35 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             name = 'unknown'
             namespace = None
         
+        # Collect namespace for cluster comparison (not for namespace comparison)
+        if not is_namespace_comparison and namespace:
+            all_namespaces.add(namespace)
+        
+        # For namespace comparison, collect all namespaces where resource exists
+        resource_namespaces = []
+        if is_namespace_comparison:
+            # Check if resource exists in both namespaces
+            f1 = c1_dir / base
+            f2 = c2_dir / base
+            if f1.exists():
+                try:
+                    with open(f1) as file:
+                        obj = json.load(file)
+                        ns = obj.get('metadata', {}).get('namespace', None)
+                        if ns:
+                            resource_namespaces.append(ns)
+                except:
+                    pass
+            if f2.exists():
+                try:
+                    with open(f2) as file:
+                        obj = json.load(file)
+                        ns = obj.get('metadata', {}).get('namespace', None)
+                        if ns and ns not in resource_namespaces:
+                            resource_namespaces.append(ns)
+                except:
+                    pass
+        
         # Inizializza lista per nuovo Kind
         if kind not in resources_by_kind:
             resources_by_kind[kind] = []
@@ -733,6 +771,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             'name': name,
             'kind': kind,
             'namespace': namespace,
+            'resource_namespaces': resource_namespaces if is_namespace_comparison else [],
             'changed': changed
         })
     
@@ -755,6 +794,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             base = resource['base']
             name = resource['name']
             namespace = resource.get('namespace')
+            resource_namespaces = resource.get('resource_namespaces', [])
             changed = resource['changed']
             
             # ----------------------------------------
@@ -858,9 +898,22 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             # ----------------------------------------
             # Prepara il namespace badge se disponibile con colore dinamico
             namespace_badge = ''
-            if namespace:
+            if is_namespace_comparison and resource_namespaces:
+                # For namespace comparison, show all namespaces where resource exists
+                badges = []
+                for ns in resource_namespaces:
+                    ns_color = get_namespace_color(ns)
+                    badges.append(f'<span class="namespace-badge" style="background-color: {ns_color};">{html_lib.escape(ns)}</span>')
+                namespace_badge = ' '.join(badges)
+            elif namespace:
+                # For cluster comparison, show single namespace
                 ns_color = get_namespace_color(namespace)
                 namespace_badge = f'<span class="namespace-badge" style="background-color: {ns_color};">{html_lib.escape(namespace)}</span>'
+            
+            # Prepare namespace attribute for buttons (only for cluster comparison)
+            namespace_attr = ''
+            if not is_namespace_comparison and namespace:
+                namespace_attr = f' data-namespace="{html_lib.escape(namespace)}"'
             
             resources_html.append(f'''
                 <div class="resource-section" id="resource-{base.replace('.', '-')}">
@@ -881,7 +934,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-diff-content="{diff_content_base64}"
                                     data-filename="{html_lib.escape(base)}"
                                     data-cluster1="{html_lib.escape(cluster1)}"
-                                    data-cluster2="{html_lib.escape(cluster2)}"
+                                    data-cluster2="{html_lib.escape(cluster2)}"{namespace_attr}
                                     onclick="event.stopPropagation(); showDiffFromButton(this)">
                                 View Diff
                             </button>
@@ -890,7 +943,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                                     data-json2="{json2_base64}"
                                     data-filename="{html_lib.escape(base)}"
                                     data-cluster1="{html_lib.escape(cluster1)}"
-                                    data-cluster2="{html_lib.escape(cluster2)}"
+                                    data-cluster2="{html_lib.escape(cluster2)}"{namespace_attr}
                                     onclick="event.stopPropagation(); showSideBySideDiff(this)">
                                 Side-by-Side
                             </button>
@@ -967,6 +1020,28 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
     # ========================================
     # 4. ASSEMBLAGGIO HTML COMPLETO
     # ========================================
+    
+    # Prepare cluster/namespace header for namespace comparison
+    cluster_namespace_header = ''
+    if is_namespace_comparison and cluster_name:
+        sorted_compared_namespaces = ', '.join(sorted(compared_namespaces))
+        cluster_namespace_header = f'''
+                <div class="metadata-item">
+                    <strong>Cluster:</strong> {html_lib.escape(cluster_name)}
+                </div>
+                <div class="metadata-item">
+                    <strong>ns:</strong> {html_lib.escape(sorted_compared_namespaces)}
+                </div>'''
+    
+    # Prepare namespace list HTML (only for cluster comparison)
+    namespace_list_html = ''
+    if not is_namespace_comparison and all_namespaces:
+        sorted_namespaces = ', '.join(sorted(all_namespaces))
+        namespace_list_html = f'''
+                <div class="metadata-item">
+                    <strong>ns:</strong> {html_lib.escape(sorted_namespaces)}
+                </div>'''
+    
     # Template HTML con CSS embedded e JavaScript per interattività
     
     html_content = f'''<!DOCTYPE html>
@@ -2194,14 +2269,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const filename = button.getAttribute('data-filename');
             const cluster1 = button.getAttribute('data-cluster1');
             const cluster2 = button.getAttribute('data-cluster2');
+            const namespace = button.getAttribute('data-namespace');
             
             // Decode base64 diff content
             const diffContent = atob(base64Content);
-            showDiff(diffContent, filename, cluster1, cluster2);
+            showDiff(diffContent, filename, cluster1, cluster2, namespace);
         }}
         
         // Show diff modal with color formatting
-        function showDiff(diffContent, filename, cluster1, cluster2) {{
+        function showDiff(diffContent, filename, cluster1, cluster2, namespace) {{
             const modal = document.getElementById('diffModal');
             const modalTitle = document.getElementById('modalTitle');
             const modalBody = document.getElementById('modalBody');
@@ -2227,10 +2303,20 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     className = 'diff-header';
                 }} else if (line.startsWith('+')) {{
                     className = 'diff-add';
-                    tooltip = cluster2 || 'Cluster 2';  // Righe verdi = cluster2
+                    // Show cluster/namespace for additions
+                    if (namespace) {{
+                        tooltip = `${{cluster2}}/${{namespace}}`;
+                    }} else {{
+                        tooltip = cluster2 || 'Cluster 2';
+                    }}
                 }} else if (line.startsWith('-')) {{
                     className = 'diff-remove';
-                    tooltip = cluster1 || 'Cluster 1';  // Righe rosse = cluster1
+                    // Show cluster/namespace for removals
+                    if (namespace) {{
+                        tooltip = `${{cluster1}}/${{namespace}}`;
+                    }} else {{
+                        tooltip = cluster1 || 'Cluster 1';
+                    }}
                 }}
                 
                 // Escape HTML to prevent XSS
@@ -2299,6 +2385,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const filename = button.getAttribute('data-filename');
             const cluster1 = button.getAttribute('data-cluster1');
             const cluster2 = button.getAttribute('data-cluster2');
+            const namespace = button.getAttribute('data-namespace');
             
             // Decode base64 JSON content
             const json1Raw = atob(json1Base64);
@@ -2333,8 +2420,15 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const rightHeader = document.getElementById('sideBySideRightHeader');
             
             modalTitle.textContent = filename;
-            leftHeader.textContent = cluster1;
-            rightHeader.textContent = cluster2;
+            
+            // Display cluster/namespace in headers if namespace is available
+            if (namespace) {{
+                leftHeader.textContent = `${{cluster1}}/${{namespace}}`;
+                rightHeader.textContent = `${{cluster2}}/${{namespace}}`;
+            }} else {{
+                leftHeader.textContent = cluster1;
+                rightHeader.textContent = cluster2;
+            }}
             
             // NOW split into lines for comparison (after \\n expansion)
             const lines1 = json1Pretty.split('\\n');
@@ -3493,12 +3587,14 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <h1>kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
+                {cluster_namespace_header if is_namespace_comparison else f'''
                 <div class="metadata-item">
                     <strong>{comparison_type_capitalized} 1:</strong> {entity1_label}
                 </div>
                 <div class="metadata-item">
                     <strong>{comparison_type_capitalized} 2:</strong> {entity2_label}
-                </div>
+                </div>{namespace_list_html}'''
+                }
                 <div class="metadata-item">
                     <strong>Generated:</strong> {timestamp}
                 </div>
