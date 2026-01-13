@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-01-13
+
+### Added
+- **Text Search in Side-by-Side View**: Interactive search functionality in side-by-side diff modal
+  * Search input field in modal toolbar
+  * Real-time search with highlighting of matching text
+  * Case-insensitive search across both panes
+  * Match counter showing current match and total matches (e.g., "1/5")
+  * Previous/Next navigation buttons to jump between search results
+  * Automatic scroll to center matched text in viewport
+  * Visual highlight with yellow background for active match
+  * Keyboard shortcuts support (Enter for next, Shift+Enter for previous)
+  * Clear button to reset search and remove highlights
+  * Search integrated with existing diff navigation
+
+### Fixed
+- **Search Input Selector**: Corrected querySelector to properly target search input element
+  * Fixed issue where search functionality wasn't properly initialized
+  * Improved error handling for search-related DOM operations
+
+### Changed
+- **Search UX**: Enhanced user experience for text search
+  * Search results persist during diff navigation
+  * Smooth scrolling to matched text
+  * Clear visual indication of current search match
+  * Search state maintained across filter changes
+
 ## [1.7.1] - 2026-01-11
 
 ### Added

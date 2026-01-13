@@ -14,6 +14,7 @@ kdiff is a Python tool for comparing Kubernetes configurations between two clust
 - Environment variables compared by name, not array position
 - Interactive HTML reports with collapsible sections and dual-pane diff viewer
 - Side-by-side comparison with inline character-level highlighting
+- **Text search**: Real-time search functionality in side-by-side view with match navigation
 - Diff navigation: Previous/Next buttons with editable counter for jumping to specific differences
 - Filter capabilities for added/removed/modified lines
 - Automated detection and disabling of non-applicable filters
@@ -195,6 +196,7 @@ The interactive HTML report (`diff-details.html`) provides:
 - Two diff viewing modes:
   - Standard unified diff view
   - Side-by-side dual-pane comparison with navigation
+- **Text Search**: Real-time search in side-by-side view with match counter and navigation
 - **Diff Navigation**: Previous/Next buttons with editable counter to jump to specific differences
 - Character-level highlighting for modified lines
 - Interactive filters for added/removed/modified lines
@@ -343,5 +345,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.7.1
+Current version: 1.7.2
 
