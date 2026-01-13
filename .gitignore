@@ -1,4 +1,5 @@
 /kdiff_output/
+/test_output/
 *.log
 *.diff
 # ToDo List
