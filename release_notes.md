@@ -1,3 +1,102 @@
+# kdiff v1.7.3 - Enhanced Namespace Context in HTML Reports
+
+## Overview
+
+Version 1.7.3 significantly improves namespace and cluster context visibility in HTML reports. Whether you're comparing two clusters or multiple namespaces within a single cluster, the enhanced reports now provide comprehensive context information that makes it easier to understand where differences occur.
+
+## ✨ New Features
+
+### Enhanced Namespace Context Display
+
+#### Two-Cluster Comparison Mode
+When comparing resources across two different clusters:
+- **Namespace List in Header**: All compared namespaces are now listed in the report header
+- **Cluster/Namespace in Tooltips**: Hover tooltips show both cluster and namespace information
+- **Side-by-Side Modal Headers**: Modal windows display cluster/namespace for each pane
+- **Better Context Tracking**: Easy to see which namespaces are being compared
+
+#### Namespace Comparison Mode
+When comparing multiple namespaces within a single cluster:
+- **Cluster Name in Header**: Cluster name prominently displayed for context
+- **Multiple Namespace Badges**: Resources show all namespaces where they exist
+- **Color-Coded Badges**: Visual distinction between different namespaces
+- **Enhanced Resource Context**: Clear indication of namespace scope for each resource
+
+### Unified Header Layout
+- **Consistent Design**: Same header structure for both comparison modes
+- **Improved Visual Hierarchy**: Better organization of cluster and namespace information
+- **Enhanced Readability**: Clearer presentation of context metadata
+
+## 🐛 Bug Fixes
+
+### F-String Syntax Error
+- **Fixed**: Corrected nested f-string syntax error in metadata header generation
+- **Impact**: Resolved Python syntax error that prevented HTML report generation
+- **Improvement**: Better code structure with separated metadata construction
+
+## 📊 Technical Details
+
+### Implementation
+- Refactored metadata header generation to avoid nested f-strings
+- Added namespace collection logic for both comparison modes
+- Enhanced data attributes for proper context passing to modals
+- Improved badge generation with namespace-specific styling
+
+### Testing
+- All 49 existing tests passing
+- Syntax validation confirmed
+- Manual testing across both comparison modes
+
+## 🚀 Usage Example
+
+### Two-Cluster Comparison
+```bash
+kdiff -c1 prod-cluster -c2 staging-cluster -ns production,staging
+```
+The report will now show:
+- Header: "Comparing: prod-cluster vs staging-cluster"
+- "ns: production, staging" in metadata
+- Cluster/namespace in all tooltips and modals
+
+### Namespace Comparison
+```bash
+kdiff -c prod-cluster --namespaces ns1,ns2,ns3
+```
+The report will now show:
+- Header: "Cluster: prod-cluster"
+- "ns: ns1, ns2" in metadata
+- Multiple namespace badges for resources in different namespaces
+
+## 📦 Installation
+
+### Update to v1.7.3
+
+```bash
+git pull origin main
+git checkout v1.7.3
+```
+
+**Docker:**
+```bash
+docker pull mabombo/kdiff:1.7.3
+```
+
+## 🔄 Migration Notes
+
+- No breaking changes
+- Existing reports remain functional
+- New context features automatically applied
+- No configuration changes required
+
+## 📝 Release Information
+
+**Version:** 1.7.3  
+**Release Date:** January 13, 2026  
+**Git Tag:** v1.7.3  
+**Tests:** 49 passing  
+
+---
+
 # kdiff v1.7.2 - Text Search in Side-by-Side View
 
 ## Overview

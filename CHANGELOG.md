@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-01-13
+
+### Added
+- **Enhanced Namespace Context in HTML Reports**: Comprehensive namespace information display
+  * Two-cluster comparison: namespace list in header for better context
+  * Namespace comparison: cluster name prominently displayed in header
+  * Multiple namespace badges for resources spanning different namespaces
+  * Color-coded namespace badges for visual distinction
+  * Cluster/namespace information in tooltips and side-by-side modal headers
+  * Unified header layout for both comparison modes (cluster vs namespace)
+
+### Fixed
+- **F-String Syntax Error**: Corrected nested f-string in metadata header generation
+  * Fixed Python syntax error that prevented proper HTML report generation
+  * Separated metadata header construction from main template
+  * Improved code maintainability and readability
+
+### Changed
+- **HTML Report Header Structure**: Streamlined metadata display
+  * Consistent layout between cluster and namespace comparison modes
+  * Better visual hierarchy for cluster and namespace information
+  * Enhanced context visibility for resource differences
+
 ## [1.7.2] - 2026-01-13
 
 ### Added

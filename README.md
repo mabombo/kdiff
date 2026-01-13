@@ -345,5 +345,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.7.2
+Current version: 1.7.3
 
