@@ -4,7 +4,7 @@
 
 Version 1.7.3 significantly improves namespace and cluster context visibility in HTML reports. Whether you're comparing two clusters or multiple namespaces within a single cluster, the enhanced reports now provide comprehensive context information that makes it easier to understand where differences occur.
 
-## ✨ New Features
+## New Features
 
 ### Enhanced Namespace Context Display
 
@@ -27,14 +27,14 @@ When comparing multiple namespaces within a single cluster:
 - **Improved Visual Hierarchy**: Better organization of cluster and namespace information
 - **Enhanced Readability**: Clearer presentation of context metadata
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 ### F-String Syntax Error
 - **Fixed**: Corrected nested f-string syntax error in metadata header generation
 - **Impact**: Resolved Python syntax error that prevented HTML report generation
 - **Improvement**: Better code structure with separated metadata construction
 
-## 📊 Technical Details
+## Technical Details
 
 ### Implementation
 - Refactored metadata header generation to avoid nested f-strings
@@ -47,7 +47,7 @@ When comparing multiple namespaces within a single cluster:
 - Syntax validation confirmed
 - Manual testing across both comparison modes
 
-## 🚀 Usage Example
+## Usage Example
 
 ### Two-Cluster Comparison
 ```bash
@@ -67,7 +67,7 @@ The report will now show:
 - "ns: ns1, ns2" in metadata
 - Multiple namespace badges for resources in different namespaces
 
-## 📦 Installation
+## Installation
 
 ### Update to v1.7.3
 
@@ -81,14 +81,14 @@ git checkout v1.7.3
 docker pull mabombo/kdiff:1.7.3
 ```
 
-## 🔄 Migration Notes
+## Migration Notes
 
 - No breaking changes
 - Existing reports remain functional
 - New context features automatically applied
 - No configuration changes required
 
-## 📝 Release Information
+## Release Information
 
 **Version:** 1.7.3  
 **Release Date:** January 13, 2026  
@@ -103,7 +103,7 @@ docker pull mabombo/kdiff:1.7.3
 
 Version 1.7.2 introduces powerful text search functionality in the side-by-side diff modal, enabling users to quickly locate specific content across both panes with real-time highlighting and navigation.
 
-## ✨ New Features
+## New Features
 
 ### Text Search in Side-by-Side View
 
@@ -136,14 +136,14 @@ Version 1.7.2 introduces powerful text search functionality in the side-by-side 
 - Maintains zoom level during search
 - Synchronized scrolling preserved while searching
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 ### Search Input Selector
 - **Fixed:** Corrected querySelector to properly target search input element
 - **Impact:** Search functionality now initializes correctly on modal open
 - **Details:** Improved error handling for search-related DOM operations
 
-## 🎯 Use Cases
+## Use Cases
 
 **Finding Specific Configuration Values:**
 ```
@@ -166,7 +166,7 @@ Action: Use search to highlight all endpoint references
 Result: Quickly navigate through all API paths in both versions
 ```
 
-## 💡 Tips & Tricks
+## Tips & Tricks
 
 **Efficient Searching:**
 1. Start search while modal is loading for instant results
@@ -190,7 +190,7 @@ Result: Quickly navigate through all API paths in both versions
 - Combine search with zoom for detailed inspection
 - Clear search between different lookups for clarity
 
-## 🔧 Technical Details
+## Technical Details
 
 **Search Implementation:**
 - JavaScript-based client-side search
@@ -205,7 +205,7 @@ Result: Quickly navigate through all API paths in both versions
 - Smooth scrolling animations
 - Minimal memory footprint
 
-## 📊 Comparison with v1.7.1
+## Comparison with v1.7.1
 
 | Feature | v1.7.1 | v1.7.2 |
 |---------|--------|--------|
@@ -215,7 +215,7 @@ Result: Quickly navigate through all API paths in both versions
 | Keyboard Shortcuts | Diff nav only | Diff + Search |
 | Visual Highlighting | Diffs only | Diffs + Search |
 
-## 🚀 Getting Started
+## Getting Started
 
 **Installation:**
 ```bash
@@ -238,7 +238,7 @@ kdiff -c1 prod-cluster -c2 staging-cluster -n myapp
 # Use search box at top of modal
 ```
 
-## 📝 Release Notes
+## Release Notes
 
 **Version:** 1.7.2  
 **Release Date:** January 13, 2026  
@@ -261,7 +261,7 @@ kdiff -c1 prod-cluster -c2 staging-cluster -n myapp
 
 Version 1.7.1 enhances the side-by-side diff modal with improved navigation user experience. The modal now automatically shows the first difference and maintains consistent counter display behavior.
 
-## ✨ User Experience Improvements
+## User Experience Improvements
 
 ### Auto-Navigation to First Diff
 
@@ -312,7 +312,7 @@ Version 1.7.1 enhances the side-by-side diff modal with improved navigation user
   * Yellow: Modified lines (inline diffs)
   * Yellow highlight: Current navigation position
 
-## 🔧 Technical Implementation
+## Technical Implementation
 
 ### JavaScript Enhancements
 
@@ -340,7 +340,7 @@ function updateDiffCounter() {
 }
 ```
 
-## 📦 Installation & Upgrade
+## Installation & Upgrade
 
 ### PyPI
 ```bash
@@ -354,13 +354,13 @@ docker pull mabombo/kdiff:1.7.1
 docker pull mabombo/kdiff:latest
 ```
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 - Fixed diff counter showing 0 as minimum value
 - Fixed first diff not being centered on modal open
 - Improved layout rendering timing for auto-navigation
 
-## 🎯 Use Cases
+## Use Cases
 
 ### Quick Diff Review Workflow
 
@@ -382,7 +382,7 @@ docker pull mabombo/kdiff:latest
 - Counter consistently shows 1/5 even with filters active
 - No confusion from 0-based indexing
 
-## 🔄 Migration Notes
+## Migration Notes
 
 ### From v1.7.0
 
@@ -399,7 +399,7 @@ No breaking changes. All existing functionality preserved.
 - Kubernetes: 1.20+
 - kubectl: Must be installed and configured
 
-## 📝 Summary
+## Summary
 
 Version 1.7.1 is a focused UX improvement release that makes the side-by-side diff navigation more intuitive and efficient. Combined with the 5.7x performance improvement from v1.7.0, kdiff now offers both speed and excellent user experience for Kubernetes cluster comparisons.
 
@@ -411,7 +411,7 @@ Version 1.7.1 is a focused UX improvement release that makes the side-by-side di
 
 Version 1.7.0 introduces parallel execution of kubectl calls, delivering a **5.7x performance improvement** over the previous version. This major optimization makes kdiff significantly faster for comparing large clusters and multiple namespaces.
 
-## 🚀 Major Features
+## Major Features
 
 ### Parallel Execution Engine
 
@@ -445,7 +445,7 @@ kdiff -c1 prod -c2 staging -n myapp --max-workers 20
 kdiff -c1 prod -c2 staging -n myapp --max-workers 5
 ```
 
-## 🔧 Technical Implementation
+## Technical Implementation
 
 ### Architecture Changes
 
@@ -460,7 +460,7 @@ kdiff -c1 prod -c2 staging -n myapp --max-workers 5
 - Safe concurrent file writes
 - Proper error propagation across threads
 
-## 📊 Performance Analysis
+## Performance Analysis
 
 ### Scalability Benefits
 
@@ -508,7 +508,7 @@ Added 10 new tests specifically for parallel execution:
 
 **Total: 49 tests (39 existing + 10 new) - All passing ✅**
 
-## 🔄 Migration Notes
+## Migration Notes
 
 - No breaking changes
 - Parallel execution enabled by default
@@ -516,7 +516,7 @@ Added 10 new tests specifically for parallel execution:
 - All existing commands work without modification
 - Configuration files and scripts require no updates
 
-## 💡 Use Cases
+## Use Cases
 
 **CI/CD Pipelines:**
 ```bash
@@ -537,7 +537,7 @@ kdiff -c1 dev -c2 staging -n myapp
 # Now completes in seconds instead of ~20 seconds
 ```
 
-## 📦 Docker Image
+## Docker Image
 
 ```bash
 # Pull latest version
@@ -551,11 +551,11 @@ docker run --rm -v ~/.kube:/root/.kube \
   -n default --max-workers 15
 ```
 
-## 📝 Full Changelog
+## Full Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
-## 🎯 What's Next
+## What's Next
 
 Future optimizations being considered:
 - Async I/O for even better performance
@@ -571,7 +571,7 @@ Future optimizations being considered:
 
 Version 1.6.0 introduces a powerful navigation system for the side-by-side diff viewer, making it significantly easier to review and navigate through differences in large Kubernetes resource comparisons.
 
-## 🎯 Major Features
+## Major Features
 
 ### Interactive Diff Navigation
 
@@ -622,7 +622,7 @@ Version 1.6.0 introduces a powerful navigation system for the side-by-side diff 
 - Smooth scroll with fine-tuning for nearby navigation
 - Efficient diff collection (excludes hidden/placeholder elements)
 
-## 🐛 Bug Fixes
+## Bug Fixes
 
 - Fixed diff counter not updating when filters changed
 - Fixed alignment issues between left and right panes
@@ -630,7 +630,7 @@ Version 1.6.0 introduces a powerful navigation system for the side-by-side diff 
 - Improved wraparound centering accuracy
 - Fixed counter visibility (better contrast)
 
-## 💡 Use Cases
+## Use Cases
 
 **Large Resource Comparisons:**
 ```bash
@@ -652,14 +652,14 @@ kdiff -c REEVO-BMW-PROD -n connect,default,kube-system
 # Focus on specific change types with filters
 ```
 
-## 🔄 Migration Notes
+## Migration Notes
 
 - No breaking changes
 - Navigation feature automatically available in all HTML reports
 - Existing reports remain functional
 - No configuration changes required
 
-## 📦 Docker Image
+## Docker Image
 
 ```bash
 # Pull latest version
@@ -673,7 +673,7 @@ docker run --rm -v ~/.kube:/root/.kube \
   -n default -o /data/output
 ```
 
-## 📝 Full Changelog
+## Full Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
@@ -1585,14 +1585,14 @@ kdiff -c1 prod -c2 staging -n myapp,monitoring --include-cr
   - "Click to view details" hint that changes color on hover
   - Makes it immediately clear the card is interactive and clickable
 
-## 🔧 Improvements
+## Improvements
 - UI consistency: All toggle buttons use same style (⇅ icon)
 - Better visual feedback for interactive elements
 - More intuitive report organization
 - Fixed alignment issues in console output
 - Corrected cluster name display throughout reports
 
-## 📦 Installation
+## Installation
 
 ```bash
 pip install kdiff==1.1.0
