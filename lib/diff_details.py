@@ -2084,6 +2084,31 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
+        /* Search result highlighting */
+        .search-highlight {{
+            background: rgba(251, 191, 36, 0.4);
+            border-radius: 2px;
+            padding: 1px 2px;
+            border: 1px solid rgba(251, 191, 36, 0.6);
+        }}
+        
+        .search-highlight-current {{
+            background: rgba(251, 146, 60, 0.6);
+            border: 1px solid rgba(251, 146, 60, 1);
+            font-weight: 600;
+            box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3);
+            animation: pulseSearchHighlight 1s ease-in-out;
+        }}
+        
+        @keyframes pulseSearchHighlight {{
+            0%, 100% {{
+                box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3);
+            }}
+            50% {{
+                box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.5);
+            }}
+        }}
+        
         /* Inline diff highlighting within modified lines */
         .inline-diff-highlight {{
             background: rgba(251, 191, 36, 0.5);
@@ -2233,7 +2258,11 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             const modal = document.getElementById('diffModal');
             const sideBySideModal = document.getElementById('sideBySideModal');
             if (modal) modal.style.display = 'none';
-            if (sideBySideModal) sideBySideModal.style.display = 'none';
+            if (sideBySideModal) {{
+                sideBySideModal.style.display = 'none';
+                // Clear search when closing modal
+                clearSideBySideSearch();
+            }}
         }}
         
         // ========================================
@@ -2906,6 +2935,237 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
+        // ===== SEARCH FUNCTIONALITY =====
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        
+        function performSideBySideSearch() {{
+            const searchInput = document.getElementById('sideBySideSearchInput');
+            const caseSensitive = document.getElementById('searchCaseSensitive').checked;
+            const useRegex = document.getElementById('searchUseRegex').checked;
+            const searchTerm = searchInput.value;
+            
+            // Clear previous search highlights
+            clearSearchHighlights();
+            searchResults = [];
+            currentSearchIndex = -1;
+            
+            if (!searchTerm) {{
+                updateSearchCounter();
+                return;
+            }}
+            
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            if (!leftPane || !rightPane) {{
+                console.error('Side-by-side panes not found');
+                return;
+            }}
+            
+            // Search in both panes
+            searchInPane(leftPane, searchTerm, caseSensitive, useRegex, 'left');
+            searchInPane(rightPane, searchTerm, caseSensitive, useRegex, 'right');
+            
+            console.log('Search completed. Found', searchResults.length, 'results');
+            
+            // Sort results by position in document
+            searchResults.sort((a, b) => {{
+                const aRect = a.element.getBoundingClientRect();
+                const bRect = b.element.getBoundingClientRect();
+                return aRect.top - bRect.top;
+            }});
+            
+            updateSearchCounter();
+            
+            // Navigate to first result if available
+            if (searchResults.length > 0) {{
+                currentSearchIndex = 0;
+                highlightCurrentSearchResult();
+            }}
+        }}
+        
+        function searchInPane(pane, searchTerm, caseSensitive, useRegex, side) {{
+            const lines = pane.querySelectorAll('.code-line-content');
+            
+            lines.forEach((line, index) => {{
+                const text = line.textContent;
+                let matches = [];
+                
+                try {{
+                    if (useRegex) {{
+                        const flags = caseSensitive ? 'g' : 'gi';
+                        const regex = new RegExp(searchTerm, flags);
+                        let match;
+                        while ((match = regex.exec(text)) !== null) {{
+                            matches.push({{ start: match.index, end: match.index + match[0].length, text: match[0] }});
+                        }}
+                    }} else {{
+                        const searchText = caseSensitive ? text : text.toLowerCase();
+                        const searchPattern = caseSensitive ? searchTerm : searchTerm.toLowerCase();
+                        let startIndex = 0;
+                        let foundIndex;
+                        
+                        while ((foundIndex = searchText.indexOf(searchPattern, startIndex)) !== -1) {{
+                            matches.push({{ 
+                                start: foundIndex, 
+                                end: foundIndex + searchPattern.length,
+                                text: text.substring(foundIndex, foundIndex + searchPattern.length)
+                            }});
+                            startIndex = foundIndex + 1;
+                        }}
+                    }}
+                }} catch (e) {{
+                    // Invalid regex, ignore
+                    console.error('Search error:', e);
+                    return;
+                }}
+                
+                // Highlight matches in the line
+                if (matches.length > 0) {{
+                    matches.forEach(match => {{
+                        const result = {{
+                            element: line,
+                            line: index + 1,
+                            side: side,
+                            matchStart: match.start,
+                            matchEnd: match.end,
+                            matchText: match.text
+                        }};
+                        searchResults.push(result);
+                    }});
+                }}
+            }});
+        }}
+        
+        function clearSearchHighlights() {{
+            const leftPane = document.getElementById('sideBySideLeftPane');
+            const rightPane = document.getElementById('sideBySideRightPane');
+            
+            // Clear all search highlight marks
+            [leftPane, rightPane].forEach(pane => {{
+                if (!pane) return;
+                const highlights = pane.querySelectorAll('.search-highlight, .search-highlight-current');
+                highlights.forEach(mark => {{
+                    const parent = mark.parentNode;
+                    if (parent) {{
+                        parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                        parent.normalize();
+                    }}
+                }});
+            }});
+        }}
+        
+        function highlightCurrentSearchResult() {{
+            if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
+            
+            const result = searchResults[currentSearchIndex];
+            const line = result.element;
+            const text = line.textContent;
+            
+            // Clear existing highlights in this line
+            const existingHighlights = line.querySelectorAll('.search-highlight');
+            existingHighlights.forEach(el => {{
+                const parent = el.parentNode;
+                if (parent) {{
+                    parent.replaceChild(document.createTextNode(el.textContent), el);
+                    parent.normalize();
+                }}
+            }});
+            
+            // Apply all highlights for this line
+            const lineResults = searchResults.filter(r => r.element === line);
+            if (lineResults.length === 0) return;
+            
+            // Sort matches by position
+            lineResults.sort((a, b) => a.matchStart - b.matchStart);
+            
+            // Build new content with highlights
+            let newHTML = '';
+            let lastIndex = 0;
+            
+            lineResults.forEach((r, idx) => {{
+                // Add text before match
+                newHTML += escapeHtml(text.substring(lastIndex, r.matchStart));
+                
+                // Add highlighted match
+                const isCurrent = (r === result);
+                const highlightClass = isCurrent ? 'search-highlight search-highlight-current' : 'search-highlight';
+                newHTML += `<mark class="${{highlightClass}}">${{escapeHtml(r.matchText)}}</mark>`;
+                
+                lastIndex = r.matchEnd;
+            }});
+            
+            // Add remaining text
+            newHTML += escapeHtml(text.substring(lastIndex));
+            
+            line.innerHTML = newHTML;
+            
+            // Scroll to current result
+            const paneId = result.side === 'left' ? 'sideBySideLeftPane' : 'sideBySideRightPane';
+            const pane = document.getElementById(paneId);
+            const lineRect = line.getBoundingClientRect();
+            const paneRect = pane.getBoundingClientRect();
+            
+            const scrollOffset = lineRect.top - paneRect.top + pane.scrollTop - (pane.clientHeight / 2);
+            pane.scrollTop = scrollOffset;
+            
+            updateSearchCounter();
+        }}
+        
+        function escapeHtml(text) {{
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }}
+        
+        function navigateToNextSearchResult() {{
+            if (searchResults.length === 0) return;
+            
+            currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+            highlightCurrentSearchResult();
+        }}
+        
+        function navigateToPreviousSearchResult() {{
+            if (searchResults.length === 0) return;
+            
+            currentSearchIndex = currentSearchIndex <= 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+            highlightCurrentSearchResult();
+        }}
+        
+        function updateSearchCounter() {{
+            const counter = document.getElementById('searchResultCounter');
+            if (searchResults.length === 0) {{
+                counter.textContent = '0 / 0';
+            }} else {{
+                counter.textContent = `${{currentSearchIndex + 1}} / ${{searchResults.length}}`;
+            }}
+        }}
+        
+        function clearSideBySideSearch() {{
+            document.getElementById('sideBySideSearchInput').value = '';
+            document.getElementById('searchCaseSensitive').checked = false;
+            document.getElementById('searchUseRegex').checked = false;
+            clearSearchHighlights();
+            searchResults = [];
+            currentSearchIndex = -1;
+            updateSearchCounter();
+        }}
+        
+        function handleSearchKeydown(event) {{
+            if (event.key === 'Enter') {{
+                event.preventDefault();
+                if (event.shiftKey) {{
+                    navigateToPreviousSearchResult();
+                }} else {{
+                    navigateToNextSearchResult();
+                }}
+            }} else if (event.key === 'Escape') {{
+                clearSideBySideSearch();
+            }}
+        }}
+        // ===== END SEARCH FUNCTIONALITY =====
+        
         function syncPaneScrolling(leftPaneId, rightPaneId) {{
             const leftPane = document.getElementById(leftPaneId);
             const rightPane = document.getElementById(rightPaneId);
@@ -3372,6 +3632,28 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
                         Clear Filters
                     </button>
+                </div>
+            </div>
+            <div style="padding: 10px 20px; background: #ffffff; border-bottom: 1px solid #e5e7eb; display: flex; gap: 15px; align-items: center; font-size: 0.85em; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: #64748b;">Search:</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex: 1; max-width: 600px;">
+                    <input type="text" id="sideBySideSearchInput" placeholder="Search in side-by-side content..." style="flex: 1; padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.95em;" oninput="performSideBySideSearch()" onkeydown="handleSearchKeydown(event)">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
+                            <input type="checkbox" id="searchCaseSensitive" onchange="performSideBySideSearch()" style="cursor: pointer;">
+                            <span style="font-size: 0.9em; color: #475569;">Aa</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;">
+                            <input type="checkbox" id="searchUseRegex" onchange="performSideBySideSearch()" style="cursor: pointer;">
+                            <span style="font-size: 0.9em; color: #475569;">.*</span>
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 5px; align-items: center; min-width: 100px;">
+                        <button onclick="navigateToPreviousSearchResult()" style="padding: 4px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 3px; cursor: pointer; font-size: 0.9em;" title="Previous Match">↑</button>
+                        <span id="searchResultCounter" style="font-size: 0.9em; color: #64748b; min-width: 60px; text-align: center;">0 / 0</span>
+                        <button onclick="navigateToNextSearchResult()" style="padding: 4px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 3px; cursor: pointer; font-size: 0.9em;" title="Next Match">↓</button>
+                    </div>
+                    <button onclick="clearSideBySideSearch()" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em;">✕</button>
                 </div>
             </div>
             <div class="sidebyside-container">
