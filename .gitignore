@@ -54,3 +54,8 @@ dist/
 .eggs/
 *.whl
 images/kdiff_output/latest/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
