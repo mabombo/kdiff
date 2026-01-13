@@ -1042,6 +1042,18 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <strong>ns:</strong> {html_lib.escape(sorted_namespaces)}
                 </div>'''
     
+    # Prepare metadata header based on comparison type
+    if is_namespace_comparison:
+        metadata_header = cluster_namespace_header
+    else:
+        metadata_header = f'''
+                <div class="metadata-item">
+                    <strong>{comparison_type_capitalized} 1:</strong> {entity1_label}
+                </div>
+                <div class="metadata-item">
+                    <strong>{comparison_type_capitalized} 2:</strong> {entity2_label}
+                </div>{namespace_list_html}'''
+    
     # Template HTML con CSS embedded e JavaScript per interattività
     
     html_content = f'''<!DOCTYPE html>
@@ -3587,14 +3599,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <h1>kdiff - Detailed Comparison Report</h1>
             <div class="subtitle">Kubernetes Resource Differences Analysis</div>
             <div class="metadata">
-                {cluster_namespace_header if is_namespace_comparison else f'''
-                <div class="metadata-item">
-                    <strong>{comparison_type_capitalized} 1:</strong> {entity1_label}
-                </div>
-                <div class="metadata-item">
-                    <strong>{comparison_type_capitalized} 2:</strong> {entity2_label}
-                </div>{namespace_list_html}'''
-                }
+                {metadata_header}
                 <div class="metadata-item">
                     <strong>Generated:</strong> {timestamp}
                 </div>
