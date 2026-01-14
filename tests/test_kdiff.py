@@ -571,21 +571,18 @@ class TestSingleClusterMode(unittest.TestCase):
         """Test that fetch_resources with single_cluster_mode=True excludes namespace from filename"""
         from kdiff_cli import fetch_resources
         
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
-            
-            # Verify naming convention
-            name = "test-config"
-            namespace = "test-ns"
-            kind = 'configmap'
-            
-            # Single cluster mode filename
-            fname_single = f"{kind}__{name}.json"
-            self.assertEqual(fname_single, "configmap__test-config.json")
-            
-            # Two cluster mode filename
-            fname_two = f"{kind}__{namespace}__{name}.json"
-            self.assertEqual(fname_two, "configmap__test-ns__test-config.json")
+        # Verify naming convention
+        name = "test-config"
+        namespace = "test-ns"
+        kind = 'configmap'
+        
+        # Single cluster mode filename
+        fname_single = f"{kind}__{name}.json"
+        self.assertEqual(fname_single, "configmap__test-config.json")
+        
+        # Two cluster mode filename
+        fname_two = f"{kind}__{namespace}__{name}.json"
+        self.assertEqual(fname_two, "configmap__test-ns__test-config.json")
     
     def test_pairwise_namespace_comparison(self):
         """Test that single-cluster mode creates pairwise comparisons"""

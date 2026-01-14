@@ -214,8 +214,6 @@ virtualservices.networking.internal.istio.io
     @patch('subprocess.check_output')
     def test_discover_handles_kubectl_error(self, mock_subprocess):
         """Test that function handles kubectl errors gracefully"""
-        from subprocess import CalledProcessError
-        
         # Mock kubectl command failure
         mock_subprocess.side_effect = CalledProcessError(1, 'kubectl', b'Error: context not found')
         
