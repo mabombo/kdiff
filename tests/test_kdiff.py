@@ -18,7 +18,6 @@ sys.path.insert(0, str(ROOT / 'lib'))
 
 from normalize import normalize
 from compare import generate_configmap_diff
-import diff_details
 
 
 class TestNormalize(unittest.TestCase):
@@ -575,7 +574,6 @@ class TestSingleClusterMode(unittest.TestCase):
         
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
-            outdir = tmpdir / 'output'
             
             # Mock a kubectl get configmap output
             mock_item = {

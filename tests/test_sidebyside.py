@@ -18,8 +18,6 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib import diff_details
-
 
 class TestSideBySideDiff(unittest.TestCase):
     """Test side-by-side diff HTML generation"""
