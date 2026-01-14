@@ -692,8 +692,6 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         comparison_type_capitalized = "Cluster"
         entity1_label = cluster1
         entity2_label = cluster2
-        cluster_name = None
-        compared_namespaces = set()
     
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     
@@ -749,7 +747,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         ns = obj.get('metadata', {}).get('namespace', None)
                         if ns:
                             resource_namespaces.append(ns)
-                except:
+                except (IOError, json.JSONDecodeError, ValueError):
                     pass
             if f2.exists():
                 try:
@@ -758,7 +756,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         ns = obj.get('metadata', {}).get('namespace', None)
                         if ns and ns not in resource_namespaces:
                             resource_namespaces.append(ns)
-                except:
+                except (IOError, json.JSONDecodeError, ValueError):
                     pass
         
         # Inizializza lista per nuovo Kind

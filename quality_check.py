@@ -94,7 +94,7 @@ def check_imports(file_path):
     
     try:
         tree = ast.parse(content)
-    except:
+    except SyntaxError:
         return False, "Cannot parse file"
     
     # Get imported names
@@ -179,7 +179,7 @@ def analyze_directory_structure():
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         metrics['total_lines'] += len(f.readlines())
-                except:
+                except IOError:
                     pass
     
     return metrics
@@ -289,7 +289,7 @@ def main():
         result = subprocess.run(['git', 'log', '--oneline', '-5'], capture_output=True, text=True)
         print(f"\n{Colors.BOLD}Recent commits:{Colors.RESET}")
         print(result.stdout)
-    except:
+    except subprocess.CalledProcessError:
         print(f"{Colors.YELLOW}Git information not available{Colors.RESET}")
     
     # Final Report

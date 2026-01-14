@@ -5,8 +5,8 @@ Tests multi-threading, worker management, and thread safety.
 """
 
 import unittest
-import sys
 import json
+import sys
 import tempfile
 import shutil
 from pathlib import Path
@@ -93,8 +93,6 @@ class TestParallelExecution(unittest.TestCase):
     @patch('kdiff_cli.load_normalize_func')
     def test_thread_safe_console_output(self, mock_normalize, mock_run):
         """Test that console output is thread-safe with Lock."""
-        output_calls = []
-        
         def mock_kubectl(*args, **kwargs):
             result = MagicMock()
             result.returncode = 0

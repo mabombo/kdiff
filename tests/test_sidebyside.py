@@ -11,8 +11,8 @@ Tests verify that the HTML report includes:
 """
 
 import unittest
-import sys
 import json
+import sys
 from pathlib import Path
 
 # Add parent directory to path

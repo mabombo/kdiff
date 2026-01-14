@@ -4,11 +4,11 @@ Comprehensive test suite for kdiff
 Converts all bash tests to Python unittest
 """
 import unittest
-import json
-import subprocess
 import tempfile
 import shutil
 from pathlib import Path
+import json
+import subprocess
 import sys
 import os
 
@@ -571,8 +571,6 @@ class TestSingleClusterMode(unittest.TestCase):
     
     def test_fetch_resources_excludes_namespace_in_filename(self):
         """Test that fetch_resources with single_cluster_mode=True excludes namespace from filename"""
-        import sys
-        sys.path.insert(0, str(ROOT))
         from kdiff_cli import fetch_resources
         
         with tempfile.TemporaryDirectory() as tmpdir:

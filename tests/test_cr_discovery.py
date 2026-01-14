@@ -4,11 +4,12 @@ Test suite for Custom Resources discovery functionality
 Mocks kubectl api-resources command to test CR discovery without real clusters
 """
 import unittest
+import subprocess
 from unittest.mock import patch, MagicMock
 import sys
-import subprocess
 from pathlib import Path
 from typing import Optional
+from subprocess import CalledProcessError
 
 # Add bin to path to import kdiff functions
 ROOT = Path(__file__).parent.parent

@@ -103,8 +103,13 @@ def test_cluster_connectivity(context: str, namespaces: list[str] | None = None)
         # If namespaces are specified, test access to first namespace
         # This works with namespace-scoped permissions
         if namespaces and len(namespaces) > 0:
+            # Determine namespace for testing connectivity
+            test_ns = namespaces[0] if isinstance(namespaces, list) and namespaces else None
+        else:
+            test_ns = None
+        
+        if test_ns:
             # Use 'kubectl get ns' to test connectivity - works with namespace-scoped access
-            test_ns = namespaces[0] if isinstance(namespaces, list) else namespaces
             proc = subprocess.run(
                 ['kubectl', '--context', context, 'get', 'pods', '-n', test_ns, '--request-timeout=10s', '-o', 'name'],
                 capture_output=True,
@@ -133,7 +138,7 @@ def test_cluster_connectivity(context: str, namespaces: list[str] | None = None)
             return False, f"Connection timeout to cluster '{context}' - cluster may be down or unreachable"
         elif 'Forbidden' in stderr or 'forbidden' in stderr:
             # If testing with namespace and got Forbidden, might not have access to that namespace
-            if namespaces:
+            if test_ns:
                 return False, f"Access denied to namespace '{test_ns}' in cluster '{context}' - check RBAC permissions"
             else:
                 return False, f"Insufficient cluster-level permissions for '{context}' - this may be normal if you have only namespace-scoped access"
@@ -752,7 +757,6 @@ Default resources compared:
 
         # Parallelize fetching from both clusters
         print(f"\nFetching resources from both clusters in parallel...")
-        success1, success2 = False, False
         
         with ThreadPoolExecutor(max_workers=2) as executor:
             future1 = executor.submit(fetch_resources, args.c1, dir1, resources, ns_to_fetch, args.show_metadata, False, args.max_workers)
