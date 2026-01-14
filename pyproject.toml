@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kdiff"
-version = "1.7.1"
+version = "1.7.5"
 description = "Kubernetes cluster comparison tool with intelligent diff detection"
 readme = "README.md"
 authors = [

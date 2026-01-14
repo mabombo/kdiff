@@ -379,5 +379,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.7.4
+Current version: 1.7.5 - CodeQL Quality Release
 

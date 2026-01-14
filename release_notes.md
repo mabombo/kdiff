@@ -2,6 +2,17 @@
 
 All notable release notes for kdiff will be documented in this file.
 
+## [1.7.5] - 2026-01-14
+
+### Fixed
+- **CodeQL Quality Issues**: Resolved 25+ security and code quality issues
+  * Fixed uninitialized variable in cluster connectivity testing
+  * Removed duplicate variable initializations
+  * Fixed bare except blocks with specific exception handling
+  * Cleaned up unused imports and variables
+  * Improved error handling and security posture
+  * All 49 unit tests passing
+
 ## [1.7.4] - 2026-01-14
 
 ### Added
