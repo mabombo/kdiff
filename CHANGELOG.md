@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-01-14
+
+### Added
+- **Precompiled Binaries**: Standalone executables available for download
+  * macOS Apple Silicon (arm64) binary
+  * Linux amd64 binary
+  * GitHub Actions automated build pipeline
+  * Binaries attached to releases automatically
+  * No Python installation required for end users
+
+### Changed
+- **Documentation**: Updated installation instructions
+  * Added binary installation as recommended method
+  * Professional formatting without icons
+  * Clear download and installation steps for each platform
+
 ## [1.7.3] - 2026-01-13
 
 ### Added

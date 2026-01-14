@@ -22,9 +22,43 @@ kdiff is a Python tool for comparing Kubernetes configurations between two clust
 
 ## Requirements
 
-- Python 3.10 or higher
 - kubectl configured with access to the clusters to compare
 - Operating System: macOS, Linux, WSL on Windows
+- Python 3.10 or higher (only for source installation)
+
+## Installation
+
+### Precompiled Binaries (Recommended)
+
+Download standalone executables from the [GitHub Releases](https://github.com/mabombo/kdiff/releases) page:
+
+**macOS (Apple Silicon):**
+```bash
+# Download
+curl -L https://github.com/mabombo/kdiff/releases/latest/download/kdiff-macos-arm64 -o kdiff
+chmod +x kdiff
+
+# Move to PATH (optional)
+sudo mv kdiff /usr/local/bin/
+
+# Verify
+kdiff --version
+```
+
+**Linux (amd64):**
+```bash
+# Download
+curl -L https://github.com/mabombo/kdiff/releases/latest/download/kdiff-linux-amd64 -o kdiff
+chmod +x kdiff
+
+# Move to PATH (optional)
+sudo mv kdiff /usr/local/bin/
+
+# Verify
+kdiff --version
+```
+
+Precompiled binaries are self-contained and do not require Python installation.
 
 ## Installation
 
@@ -345,5 +379,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Version
 
-Current version: 1.7.3
+Current version: 1.7.4
 
