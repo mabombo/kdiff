@@ -180,6 +180,7 @@ def analyze_directory_structure():
                     with open(file_path, 'r', encoding='utf-8') as f:
                         metrics['total_lines'] += len(f.readlines())
                 except IOError:
+                    # Ignore files that cannot be read
                     pass
     
     return metrics

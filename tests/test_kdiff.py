@@ -5,7 +5,6 @@ Converts all bash tests to Python unittest
 """
 import unittest
 import tempfile
-import shutil
 from pathlib import Path
 import json
 import subprocess
@@ -575,37 +574,18 @@ class TestSingleClusterMode(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             
-            # Mock a kubectl get configmap output
-            mock_item = {
-                "metadata": {
-                    "name": "test-config",
-                    "namespace": "test-ns"
-                },
-                "data": {
-                    "key": "value"
-                }
-            }
-            
-            # We can't run actual kubectl, but we can verify the logic
-            # by checking that the expected filename format would be used
-            # In single_cluster_mode, filename should be: configmap__test-config.json
-            # In two_cluster_mode, filename should be: configmap__test-ns__test-config.json
-            
-            expected_single_cluster = "configmap__test-config.json"
-            expected_two_cluster = "configmap__test-ns__test-config.json"
-            
             # Verify naming convention
-            name = mock_item['metadata']['name']
-            namespace = mock_item['metadata']['namespace']
+            name = "test-config"
+            namespace = "test-ns"
             kind = 'configmap'
             
             # Single cluster mode filename
             fname_single = f"{kind}__{name}.json"
-            self.assertEqual(fname_single, expected_single_cluster)
+            self.assertEqual(fname_single, "configmap__test-config.json")
             
             # Two cluster mode filename
             fname_two = f"{kind}__{namespace}__{name}.json"
-            self.assertEqual(fname_two, expected_two_cluster)
+            self.assertEqual(fname_two, "configmap__test-ns__test-config.json")
     
     def test_pairwise_namespace_comparison(self):
         """Test that single-cluster mode creates pairwise comparisons"""

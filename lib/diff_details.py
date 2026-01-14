@@ -748,6 +748,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         if ns:
                             resource_namespaces.append(ns)
                 except (IOError, json.JSONDecodeError, ValueError):
+                    # Ignore files that cannot be read or parsed
                     pass
             if f2.exists():
                 try:
@@ -757,6 +758,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                         if ns and ns not in resource_namespaces:
                             resource_namespaces.append(ns)
                 except (IOError, json.JSONDecodeError, ValueError):
+                    # Ignore files that cannot be read or parsed
                     pass
         
         # Inizializza lista per nuovo Kind
