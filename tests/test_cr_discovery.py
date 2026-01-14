@@ -5,7 +5,7 @@ Mocks kubectl api-resources command to test CR discovery without real clusters
 """
 import unittest
 from subprocess import CalledProcessError
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import subprocess
 import sys
 from pathlib import Path
