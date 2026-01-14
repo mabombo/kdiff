@@ -118,36 +118,27 @@ def check_imports(file_path):
 
 
 def run_tests():
-    """Run test suite directly (not via run_tests.sh to avoid recursion)."""
+    """Run test suite using pytest."""
     try:
-        # Run test files directly
-        test_files = ['tests/test_kdiff.py', 'tests/test_cr_discovery.py']
-        all_passed = True
-        total_tests = 0
+        import sys
+        # Run tests using pytest with current Python executable
+        result = subprocess.run(
+            [sys.executable, '-m', 'pytest', 'tests/', '-q', '--tb=no'],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
         
-        for test_file in test_files:
-            if Path(test_file).exists():
-                result = subprocess.run(
-                    ['python3', test_file],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                if result.returncode != 0:
-                    all_passed = False
-                
-                # Extract test count
-                output = result.stdout + result.stderr
-                if 'Ran ' in output:
-                    test_line = [l for l in output.split('\n') if 'Ran ' in l]
-                    if test_line:
-                        import re
-                        match = re.search(r'Ran (\d+)', test_line[0])
-                        if match:
-                            total_tests += int(match.group(1))
+        output = result.stdout + result.stderr
+        all_passed = result.returncode == 0
         
-        if total_tests > 0:
+        # Extract test count from pytest output (e.g., "49 passed in 0.73s")
+        import re
+        match = re.search(r'(\d+) passed', output)
+        if match:
+            total_tests = int(match.group(1))
             return all_passed, f"Ran {total_tests} tests in total"
+        
         return all_passed, "Tests executed"
     except Exception as e:
         return False, str(e)
