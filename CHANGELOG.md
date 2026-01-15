@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-01-15
+
+### Changed
+- **Accessibility Improvements**: Protanopia-friendly color scheme in diff popups
+  * Changed "Added" indicators from green to blue (#0096ff) - visible for red-green colorblind users
+  * Changed "Removed" indicators from red to orange (#ff8c00) - distinguishable from blue
+  * Changed "Modified" indicators to purple (#8a2be2) - provides clear third color
+  * Updated navigation highlight to bright fluorescent yellow (#ffff00) - high contrast
+  * Changed search highlighting to light cyan (#00bfff) - accessible alternative
+  * Updated inline diff highlighting to fluorescent yellow - maximum visibility
+  * All changes applied to both "View Diff" and "Side-by-Side" popup windows
+  * Updated filter boxes and legends to match new color scheme
+  * Background remains dark (#1e1e1e) for optimal contrast
+  * WCAG 2.1 compliant contrast ratios (all ≥ 4.5:1)
+
 ## [1.7.5] - 2026-01-14
 
 ### Fixed

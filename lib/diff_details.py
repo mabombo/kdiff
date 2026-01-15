@@ -1739,13 +1739,13 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         .diff-add {{
-            background-color: rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
+            background-color: rgba(0, 150, 255, 0.2);
+            color: #5eb3ff;
         }}
         
         .diff-remove {{
-            background-color: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
+            background-color: rgba(255, 140, 0, 0.2);
+            color: #ffb366;
         }}
         
         .diff-context {{
@@ -2133,76 +2133,76 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         }}
         
         .code-line.added {{
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(0, 150, 255, 0.15);
         }}
         
         .code-line.added .code-line-content {{
-            background: rgba(16, 185, 129, 0.25);
+            background: rgba(0, 150, 255, 0.25);
         }}
         
         .code-line.removed {{
-            background: rgba(239, 68, 68, 0.15);
+            background: rgba(255, 140, 0, 0.15);
         }}
         
         .code-line.removed .code-line-content {{
-            background: rgba(239, 68, 68, 0.25);
+            background: rgba(255, 140, 0, 0.25);
         }}
         
         .code-line.modified {{
-            background: rgba(59, 130, 246, 0.15);
+            background: rgba(138, 43, 226, 0.15);
         }}
         
         .code-line.modified .code-line-content {{
-            background: rgba(59, 130, 246, 0.25);
+            background: rgba(138, 43, 226, 0.25);
         }}
         
         .code-line.navigated {{
             animation: highlightDiff 1.5s ease-out;
-            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.6);
+            box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.8);
         }}
         
         @keyframes highlightDiff {{
             0% {{
-                background: rgba(250, 204, 21, 0.5);
-                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.8);
+                background: rgba(255, 255, 0, 0.6);
+                box-shadow: 0 0 0 3px rgba(255, 255, 0, 1);
             }}
             100% {{
-                box-shadow: 0 0 0 3px rgba(250, 204, 21, 0);
+                box-shadow: 0 0 0 3px rgba(255, 255, 0, 0);
             }}
         }}
         
         /* Search result highlighting */
         .search-highlight {{
-            background: rgba(251, 191, 36, 0.4);
+            background: rgba(204, 247, 255, 0.6);
             border-radius: 2px;
             padding: 1px 2px;
-            border: 1px solid rgba(251, 191, 36, 0.6);
+            border: 1px solid rgba(0, 191, 255, 0.6);
         }}
         
         .search-highlight-current {{
-            background: rgba(251, 146, 60, 0.6);
-            border: 1px solid rgba(251, 146, 60, 1);
+            background: rgba(0, 191, 255, 0.4);
+            border: 1px solid rgba(0, 191, 255, 1);
             font-weight: 600;
-            box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3);
+            box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.3);
             animation: pulseSearchHighlight 1s ease-in-out;
         }}
         
         @keyframes pulseSearchHighlight {{
             0%, 100% {{
-                box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3);
+                box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.3);
             }}
             50% {{
-                box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.5);
+                box-shadow: 0 0 0 4px rgba(0, 191, 255, 0.5);
             }}
         }}
         
         /* Inline diff highlighting within modified lines */
         .inline-diff-highlight {{
-            background: rgba(251, 191, 36, 0.5);
+            background: rgba(255, 255, 0, 0.7);
             border-radius: 2px;
             padding: 1px 0;
             font-weight: 600;
-            box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
+            box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.5);
         }}
         
         /* Filter box hover effect */
@@ -3669,12 +3669,12 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 <span style="font-weight: 600; color: #64748b;">Legend:</span>
                 <div style="display: flex; gap: 15px;">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #dcfce7; border: 1px solid #86efac; border-radius: 3px;"></div>
-                        <span style="color: #059669;">Added</span>
+                        <div style="width: 16px; height: 16px; background: #cce7ff; border: 1px solid #5eb3ff; border-radius: 3px;"></div>
+                        <span style="color: #0096ff;">Added</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 3px;"></div>
-                        <span style="color: #dc2626;">Removed</span>
+                        <div style="width: 16px; height: 16px; background: #ffe5cc; border: 1px solid #ffb366; border-radius: 3px;"></div>
+                        <span style="color: #ff8c00;">Removed</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
@@ -3719,16 +3719,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 <span style="font-weight: 600; color: #64748b;">Filter:</span>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <div onclick="toggleSideBySideFilter('added')" id="filterLabelAdded" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #dcfce7; border: 2px solid #86efac; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #059669;">Added</span>
+                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #cce7ff; border: 2px solid #5eb3ff; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #0096ff;">Added</span>
                     </div>
                     <div onclick="toggleSideBySideFilter('removed')" id="filterLabelRemoved" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #fee2e2; border: 2px solid #fca5a5; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #dc2626;">Removed</span>
+                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #ffe5cc; border: 2px solid #ffb366; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #ff8c00;">Removed</span>
                     </div>
                     <div onclick="toggleSideBySideFilter('modified')" id="filterLabelModified" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #93c5fd; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #3b82f6;">Modified</span>
+                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #e6d5f5; border: 2px solid #c98fff; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #8a2be2;">Modified</span>
                     </div>
                     <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
                         Clear Filters
