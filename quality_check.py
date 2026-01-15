@@ -180,7 +180,7 @@ def analyze_directory_structure():
 def main():
     print(f"\n{Colors.BOLD}{Colors.BLUE}")
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║         KDIFF CODE QUALITY CERTIFICATION                ║")
+    print("║         KDIFF CODE QUALITY CERTIFICATION                 ║")
     print("╚══════════════════════════════════════════════════════════╝")
     print(f"{Colors.RESET}")
     
