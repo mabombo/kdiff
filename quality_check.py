@@ -187,7 +187,7 @@ def main():
     all_passed = True
     
     # 1. Project Structure Analysis
-    print_header("📊 PROJECT STRUCTURE ANALYSIS")
+    print_header("PROJECT STRUCTURE ANALYSIS")
     structure = analyze_directory_structure()
     print(f"  Python files:      {structure['python_files']}")
     print(f"  Library modules:   {structure['lib_files']}")
@@ -196,7 +196,7 @@ def main():
     print(f"  Lines per file:    {structure['total_lines'] // structure['python_files']:.0f} avg")
     
     # 2. Syntax Check
-    print_header("✅ SYNTAX VALIDATION")
+    print_header("SYNTAX VALIDATION")
     python_files = list(Path('.').rglob('*.py'))
     python_files = [f for f in python_files if '__pycache__' not in str(f) and '.git' not in str(f)]
     
@@ -247,14 +247,14 @@ def main():
     print(f"\n{Colors.BOLD}Total complexity score:{Colors.RESET} {total_complexity}")
     
     # 4. Test Suite
-    print_header("🧪 TEST SUITE EXECUTION")
+    print_header("TEST SUITE EXECUTION")
     test_passed, test_info = run_tests()
     print_check("Test Suite", test_passed, test_info)
     if not test_passed:
         all_passed = False
     
     # 5. Import Analysis (sample)
-    print_header("📦 IMPORT ANALYSIS")
+    print_header("IMPORT ANALYSIS")
     sample_files = ['kdiff_cli.py', 'lib/compare.py']
     import_issues = 0
     for file in sample_files:
@@ -268,7 +268,7 @@ def main():
         print(f"{Colors.GREEN}✓ No obvious import issues{Colors.RESET}")
     
     # 6. Git Status
-    print_header("🔄 VERSION CONTROL STATUS")
+    print_header("VERSION CONTROL STATUS")
     try:
         result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
         if result.stdout.strip():
@@ -292,12 +292,12 @@ def main():
     print(f"{Colors.RESET}\n")
     
     if all_passed and syntax_errors == 0 and test_passed:
-        print(f"{Colors.BOLD}{Colors.GREEN}🎉 CODE QUALITY: EXCELLENT{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.GREEN} CODE QUALITY: EXCELLENT{Colors.RESET}")
         print(f"{Colors.GREEN}✓ All checks passed{Colors.RESET}")
         print(f"{Colors.GREEN}✓ No syntax errors{Colors.RESET}")
         print(f"{Colors.GREEN}✓ All tests passing{Colors.RESET}")
         print(f"{Colors.GREEN}✓ Code structure healthy{Colors.RESET}")
-        print(f"\n{Colors.BOLD}Status: READY FOR PRODUCTION ✅{Colors.RESET}\n")
+        print(f"\n{Colors.BOLD}Status: READY FOR PRODUCTION {Colors.RESET}\n")
         return 0
     else:
         print(f"{Colors.BOLD}{Colors.YELLOW}⚠ CODE QUALITY: NEEDS ATTENTION{Colors.RESET}")
