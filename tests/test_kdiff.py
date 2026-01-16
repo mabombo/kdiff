@@ -521,6 +521,99 @@ class TestReports(unittest.TestCase):
             
             # Other files might not be created depending on summary structure
             # so we only check for HTML which should always be present
+    
+    def test_color_scheme_toggle_in_html(self):
+        """Test that color scheme toggle is present in generated HTML"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            
+            # Create mock summary
+            summary = {
+                "missing_in_1": [],
+                "missing_in_2": [],
+                "different": [
+                    "configmap__ns__test.json"
+                ],
+                "counts": {
+                    "missing_in_1": 0,
+                    "missing_in_2": 0,
+                    "different": 1
+                },
+                "field_changes": {
+                    "data.config": {"count": 1, "files": ["configmap__ns__test.json"]}
+                }
+            }
+            
+            (tmpdir / 'summary.json').write_text(json.dumps(summary))
+            
+            # Create mock cluster dirs
+            cluster1_dir = tmpdir / 'cluster1'
+            cluster2_dir = tmpdir / 'cluster2'
+            cluster1_dir.mkdir()
+            cluster2_dir.mkdir()
+            (tmpdir / 'diffs').mkdir()
+            
+            # Create mock resources
+            resource1 = {"metadata": {"name": "test"}, "data": {"config": "old"}}
+            resource2 = {"metadata": {"name": "test"}, "data": {"config": "new"}}
+            (cluster1_dir / 'configmap__ns__test.json').write_text(json.dumps(resource1))
+            (cluster2_dir / 'configmap__ns__test.json').write_text(json.dumps(resource2))
+            
+            # Create a mock diff
+            diff_content = "--- cluster1/configmap__ns__test.json\n+++ cluster2/configmap__ns__test.json\n@@ -1,1 +1,1 @@\n-old\n+new\n"
+            (tmpdir / 'diffs' / 'configmap__ns__test.json.diff').write_text(diff_content)
+            
+            # Generate reports
+            result = subprocess.run(
+                [sys.executable, str(ROOT / 'lib' / 'diff_details.py'), str(tmpdir)],
+                capture_output=True,
+                text=True
+            )
+            
+            # Read generated HTML
+            html_path = tmpdir / 'diff-details.html'
+            self.assertTrue(html_path.exists(), "diff-details.html was not created")
+            
+            html_content = html_path.read_text()
+            
+            # Verify color scheme toggle elements are present
+            # Check for View Diff modal toggle
+            self.assertIn('id="viewDiffColorToggle"', html_content, 
+                         "View Diff color toggle checkbox not found")
+            self.assertIn('Change Colors', html_content,
+                         "Change Colors label not found")
+            
+            # Check for Side-by-Side modal toggle
+            self.assertIn('id="sideBySideColorToggle"', html_content,
+                         "Side-by-Side color toggle checkbox not found")
+            
+            # Check for info icon with tooltip
+            self.assertIn('color-scheme-info-icon', html_content,
+                         "Color scheme info icon not found")
+            self.assertIn('Protanopia-friendly', html_content,
+                         "Protanopia-friendly tooltip not found")
+            
+            # Check for JavaScript functions
+            self.assertIn('toggleViewDiffColorScheme', html_content,
+                         "toggleViewDiffColorScheme function not found")
+            self.assertIn('toggleSideBySideColorScheme', html_content,
+                         "toggleSideBySideColorScheme function not found")
+            
+            # Check for CSS classes for both color schemes
+            self.assertIn('protanopia-mode', html_content,
+                         "protanopia-mode CSS class not found")
+            
+            # Check for standard colors (green/red) as default
+            self.assertIn('#10b981', html_content,
+                         "Standard green color not found")
+            self.assertIn('#ef4444', html_content,
+                         "Standard red color not found")
+            
+            # Check for protanopia-friendly colors (blue/orange)
+            self.assertIn('#0096ff', html_content,
+                         "Protanopia blue color not found")
+            self.assertIn('#ff8c00', html_content,
+                         "Protanopia orange color not found")
 
 
 class TestSingleClusterMode(unittest.TestCase):

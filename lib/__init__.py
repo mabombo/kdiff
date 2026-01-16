@@ -4,7 +4,7 @@ kdiff - Kubernetes Cluster Comparison Tool
 A powerful command-line tool for comparing Kubernetes resources between clusters.
 """
 
-__version__ = "1.7.6"
+__version__ = "1.7.7"
 __author__ = "Mauro Casiraghi"
 __license__ = "MIT"
 
