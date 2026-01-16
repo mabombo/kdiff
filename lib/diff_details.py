@@ -3876,7 +3876,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 <div class="color-scheme-toggle">
                     <label>
                         <input type="checkbox" id="viewDiffColorToggle" onchange="toggleViewDiffColorScheme()">
-                        <span>Protanopia</span>
+                        <span>Change Colors</span>
                     </label>
                     <span class="color-scheme-info-icon" title="Enable Protanopia-friendly color scheme (blue/orange instead of green/red)">i</span>
                 </div>
@@ -3919,7 +3919,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <div class="color-scheme-toggle">
                         <label>
                             <input type="checkbox" id="sideBySideColorToggle" onchange="toggleSideBySideColorScheme()">
-                            <span>Protanopia</span>
+                            <span>Change Colors</span>
                         </label>
                         <span class="color-scheme-info-icon" title="Enable Protanopia-friendly color scheme (blue/orange/purple instead of green/red/blue)">i</span>
                     </div>
