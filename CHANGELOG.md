@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-01-16
+
+### Added
+- **Color Scheme Toggle in Diff Popups**: Switch between standard and protanopia-friendly color schemes
+  * Toggle checkbox labeled "Change Colors" with info icon in both "View Diff" and "Side-by-Side" modal headers
+  * **Standard mode (default)**: Traditional green/red/blue colors for better recognition
+    - Added: green (#10b981)
+    - Removed: red (#ef4444)
+    - Modified: blue (#3b82f6)
+  * **Protanopia-friendly mode**: High-contrast colors for red-green colorblind users (v1.7.6 colors)
+    - Added: blue (#0096ff)
+    - Removed: orange (#ff8c00)
+    - Modified: purple (#8a2be2)
+  * Real-time color switching affects all diff elements: lines, backgrounds, legends, and filters
+  * Navigation and inline diff highlights remain yellow (optimal for both modes)
+  * Info icon tooltip explains the protanopia-friendly option
+  * User preference persists during session for each modal independently
+
+### Testing
+- Added comprehensive test for color scheme toggle feature
+- Verifies presence of toggle checkboxes, JavaScript functions, CSS classes, and color definitions
+- All 50 tests passing
+
 ## [1.7.6] - 2026-01-15
 
 ### Changed

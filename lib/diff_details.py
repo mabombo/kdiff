@@ -1738,12 +1738,24 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             cursor: help;
         }}
         
+        /* Default color scheme (Standard - v1.7.5) */
         .diff-add {{
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }}
+        
+        .diff-remove {{
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }}
+        
+        /* Protanopia-friendly color scheme (v1.7.6) */
+        .protanopia-mode .diff-add {{
             background-color: rgba(0, 150, 255, 0.2);
             color: #5eb3ff;
         }}
         
-        .diff-remove {{
+        .protanopia-mode .diff-remove {{
             background-color: rgba(255, 140, 0, 0.2);
             color: #ffb366;
         }}
@@ -2132,30 +2144,57 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             flex: 1;
         }}
         
+        /* Default color scheme (Standard - v1.7.5) */
         .code-line.added {{
-            background: rgba(0, 150, 255, 0.15);
+            background: rgba(34, 197, 94, 0.15);
         }}
         
         .code-line.added .code-line-content {{
-            background: rgba(0, 150, 255, 0.25);
+            background: rgba(34, 197, 94, 0.25);
         }}
         
         .code-line.removed {{
-            background: rgba(255, 140, 0, 0.15);
+            background: rgba(239, 68, 68, 0.15);
         }}
         
         .code-line.removed .code-line-content {{
-            background: rgba(255, 140, 0, 0.25);
+            background: rgba(239, 68, 68, 0.25);
         }}
         
         .code-line.modified {{
-            background: rgba(138, 43, 226, 0.15);
+            background: rgba(59, 130, 246, 0.15);
         }}
         
         .code-line.modified .code-line-content {{
+            background: rgba(59, 130, 246, 0.25);
+        }}
+        
+        /* Protanopia-friendly color scheme (v1.7.6) */
+        .protanopia-mode .code-line.added {{
+            background: rgba(0, 150, 255, 0.15);
+        }}
+        
+        .protanopia-mode .code-line.added .code-line-content {{
+            background: rgba(0, 150, 255, 0.25);
+        }}
+        
+        .protanopia-mode .code-line.removed {{
+            background: rgba(255, 140, 0, 0.15);
+        }}
+        
+        .protanopia-mode .code-line.removed .code-line-content {{
+            background: rgba(255, 140, 0, 0.25);
+        }}
+        
+        .protanopia-mode .code-line.modified {{
+            background: rgba(138, 43, 226, 0.15);
+        }}
+        
+        .protanopia-mode .code-line.modified .code-line-content {{
             background: rgba(138, 43, 226, 0.25);
         }}
         
+        /* Default color scheme (Standard - v1.7.5) - navigation highlight */
         .code-line.navigated {{
             animation: highlightDiff 1.5s ease-out;
             box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.8);
@@ -2171,23 +2210,46 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
-        /* Search result highlighting */
+        /* Protanopia-friendly (v1.7.6) uses same yellow for navigation - high contrast */
+        
+        /* Search result highlighting - Default (Standard - v1.7.5) */
         .search-highlight {{
-            background: rgba(204, 247, 255, 0.6);
+            background: rgba(254, 240, 138, 0.6);
             border-radius: 2px;
             padding: 1px 2px;
-            border: 1px solid rgba(0, 191, 255, 0.6);
+            border: 1px solid rgba(251, 191, 36, 0.6);
         }}
         
         .search-highlight-current {{
-            background: rgba(0, 191, 255, 0.4);
-            border: 1px solid rgba(0, 191, 255, 1);
+            background: rgba(251, 191, 36, 0.4);
+            border: 1px solid rgba(251, 191, 36, 1);
             font-weight: 600;
-            box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.3);
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
             animation: pulseSearchHighlight 1s ease-in-out;
         }}
         
         @keyframes pulseSearchHighlight {{
+            0%, 100% {{
+                box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+            }}
+            50% {{
+                box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.5);
+            }}
+        }}
+        
+        /* Protanopia-friendly color scheme (v1.7.6) */
+        .protanopia-mode .search-highlight {{
+            background: rgba(204, 247, 255, 0.6);
+            border: 1px solid rgba(0, 191, 255, 0.6);
+        }}
+        
+        .protanopia-mode .search-highlight-current {{
+            background: rgba(0, 191, 255, 0.4);
+            border: 1px solid rgba(0, 191, 255, 1);
+            box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.3);
+        }}
+        
+        .protanopia-mode @keyframes pulseSearchHighlight {{
             0%, 100% {{
                 box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.3);
             }}
@@ -2196,7 +2258,7 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             }}
         }}
         
-        /* Inline diff highlighting within modified lines */
+        /* Inline diff highlighting within modified lines - Default (Standard - v1.7.5) */
         .inline-diff-highlight {{
             background: rgba(255, 255, 0, 0.7);
             border-radius: 2px;
@@ -2204,6 +2266,8 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             font-weight: 600;
             box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.5);
         }}
+        
+        /* Protanopia-friendly uses same yellow for inline diffs - high contrast */
         
         /* Filter box hover effect */
         .filter-box {{
@@ -2225,6 +2289,54 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         [id^="filterLabel"][style*="opacity: 0.3"]:hover .filter-box {{
             transform: none;
             box-shadow: none;
+        }}
+        
+        /* Color scheme toggle styles */
+        .color-scheme-toggle {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            font-size: 0.85em;
+            margin-right: 15px;
+        }}
+        
+        .color-scheme-toggle label {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            color: white;
+            font-weight: 500;
+        }}
+        
+        .color-scheme-toggle input[type="checkbox"] {{
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }}
+        
+        .color-scheme-info-icon {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: help;
+            transition: all 0.2s ease;
+        }}
+        
+        .color-scheme-info-icon:hover {{
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.15);
         }}
         
         @media print {{
@@ -2269,6 +2381,109 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         function resetZoom() {{
             currentFontSize = 14;
             document.getElementById('modalBody').style.fontSize = currentFontSize + 'px';
+        }}
+        
+        // ========================================
+        // COLOR SCHEME TOGGLE - Switch between standard and protanopia-friendly colors
+        // ========================================
+        
+        // Toggle color scheme for View Diff modal
+        function toggleViewDiffColorScheme() {{
+            const checkbox = document.getElementById('viewDiffColorToggle');
+            const modalContent = document.querySelector('#diffModal .modal-content');
+            const legend = document.getElementById('viewDiffLegend');
+            
+            if (checkbox.checked) {{
+                // Protanopia-friendly mode (v1.7.6)
+                modalContent.classList.add('protanopia-mode');
+                
+                // Update legend colors - Added (blue)
+                const addedBox = legend.querySelector('.legend-added div');
+                const addedSpan = legend.querySelector('.legend-added span');
+                addedBox.style.background = '#cce7ff';
+                addedBox.style.borderColor = '#5eb3ff';
+                addedSpan.style.color = '#0096ff';
+                
+                // Update legend colors - Removed (orange)
+                const removedBox = legend.querySelector('.legend-removed div');
+                const removedSpan = legend.querySelector('.legend-removed span');
+                removedBox.style.background = '#ffe5cc';
+                removedBox.style.borderColor = '#ffb366';
+                removedSpan.style.color = '#ff8c00';
+            }} else {{
+                // Standard mode (v1.7.5)
+                modalContent.classList.remove('protanopia-mode');
+                
+                // Update legend colors - Added (green)
+                const addedBox = legend.querySelector('.legend-added div');
+                const addedSpan = legend.querySelector('.legend-added span');
+                addedBox.style.background = '#d1fae5';
+                addedBox.style.borderColor = '#10b981';
+                addedSpan.style.color = '#10b981';
+                
+                // Update legend colors - Removed (red)
+                const removedBox = legend.querySelector('.legend-removed div');
+                const removedSpan = legend.querySelector('.legend-removed span');
+                removedBox.style.background = '#fee2e2';
+                removedBox.style.borderColor = '#ef4444';
+                removedSpan.style.color = '#ef4444';
+            }}
+        }}
+        
+        // Toggle color scheme for Side-by-Side modal
+        function toggleSideBySideColorScheme() {{
+            const checkbox = document.getElementById('sideBySideColorToggle');
+            const modalContent = document.querySelector('#sideBySideModal .sidebyside-modal-content');
+            
+            if (checkbox.checked) {{
+                // Protanopia-friendly mode (v1.7.6)
+                modalContent.classList.add('protanopia-mode');
+                
+                // Update filter legend colors - Added (blue)
+                const addedBox = document.getElementById('filterBoxAdded');
+                const addedSpan = document.querySelector('#filterLabelAdded span');
+                addedBox.style.background = '#cce7ff';
+                addedBox.style.borderColor = '#5eb3ff';
+                addedSpan.style.color = '#0096ff';
+                
+                // Update filter legend colors - Removed (orange)
+                const removedBox = document.getElementById('filterBoxRemoved');
+                const removedSpan = document.querySelector('#filterLabelRemoved span');
+                removedBox.style.background = '#ffe5cc';
+                removedBox.style.borderColor = '#ffb366';
+                removedSpan.style.color = '#ff8c00';
+                
+                // Update filter legend colors - Modified (purple)
+                const modifiedBox = document.getElementById('filterBoxModified');
+                const modifiedSpan = document.querySelector('#filterLabelModified span');
+                modifiedBox.style.background = '#e6d5f5';
+                modifiedBox.style.borderColor = '#c98fff';
+                modifiedSpan.style.color = '#8a2be2';
+            }} else {{
+                // Standard mode (v1.7.5)
+                modalContent.classList.remove('protanopia-mode');
+                
+                // Update filter legend colors - Added (green)
+                const addedBox = document.getElementById('filterBoxAdded');
+                const addedSpan = document.querySelector('#filterLabelAdded span');
+                addedBox.style.background = '#d1fae5';
+                addedBox.style.borderColor = '#10b981';
+                addedSpan.style.color = '#10b981';
+                
+                // Update filter legend colors - Removed (red)
+                const removedBox = document.getElementById('filterBoxRemoved');
+                const removedSpan = document.querySelector('#filterLabelRemoved span');
+                removedBox.style.background = '#fee2e2';
+                removedBox.style.borderColor = '#ef4444';
+                removedSpan.style.color = '#ef4444';
+                
+                // Update filter legend colors - Modified (blue)
+                const modifiedBox = document.getElementById('filterBoxModified');
+                const modifiedSpan = document.querySelector('#filterLabelModified span');
+                modifiedBox.style.background = '#dbeafe';
+                modifiedBox.style.borderColor = '#3b82f6';
+                modifiedSpan.style.color = '#3b82f6';
+            }}
         }}
         
         // ========================================
@@ -3658,6 +3873,13 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Diff File</h2>
+                <div class="color-scheme-toggle">
+                    <label>
+                        <input type="checkbox" id="viewDiffColorToggle" onchange="toggleViewDiffColorScheme()">
+                        <span>Change Colors</span>
+                    </label>
+                    <span class="color-scheme-info-icon" title="Enable Protanopia-friendly color scheme (blue/orange instead of green/red)">i</span>
+                </div>
                 <div class="zoom-controls">
                     <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
                     <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">⟲</button>
@@ -3665,16 +3887,16 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                 </div>
                 <span class="close" onclick="closeDiffModal()">&times;</span>
             </div>
-            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;">
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em;" id="viewDiffLegend">
                 <span style="font-weight: 600; color: #64748b;">Legend:</span>
                 <div style="display: flex; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #cce7ff; border: 1px solid #5eb3ff; border-radius: 3px;"></div>
-                        <span style="color: #0096ff;">Added</span>
+                    <div style="display: flex; align-items: center; gap: 6px;" class="legend-added">
+                        <div style="width: 16px; height: 16px; background: #d1fae5; border: 1px solid #10b981; border-radius: 3px;"></div>
+                        <span style="color: #10b981;">Added</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 16px; height: 16px; background: #ffe5cc; border: 1px solid #ffb366; border-radius: 3px;"></div>
-                        <span style="color: #ff8c00;">Removed</span>
+                    <div style="display: flex; align-items: center; gap: 6px;" class="legend-removed">
+                        <div style="width: 16px; height: 16px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 3px;"></div>
+                        <span style="color: #ef4444;">Removed</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <div style="width: 16px; height: 16px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 3px;"></div>
@@ -3694,6 +3916,13 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
             <div class="sidebyside-modal-header">
                 <h2 id="sideBySideModalTitle" style="margin: 0; font-size: 1.3em;"></h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="color-scheme-toggle">
+                        <label>
+                            <input type="checkbox" id="sideBySideColorToggle" onchange="toggleSideBySideColorScheme()">
+                            <span>Change Colors</span>
+                        </label>
+                        <span class="color-scheme-info-icon" title="Enable Protanopia-friendly color scheme (blue/orange/purple instead of green/red/blue)">i</span>
+                    </div>
                     <div class="diff-navigation">
                         <button class="nav-btn" onclick="navigateToPreviousDiff()" title="Previous Difference (↑)">
                             <span style="font-size: 1.2em;">↑</span> Prev
@@ -3715,20 +3944,20 @@ def generate_html_report(outdir, summary, details, counts_top, total_resources, 
                     <span class="close" onclick="closeDiffModal()">&times;</span>
                 </div>
             </div>
-            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em; flex-wrap: wrap;">
+            <div style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; gap: 20px; align-items: center; font-size: 0.85em; flex-wrap: wrap;" id="sideBySideLegend">
                 <span style="font-weight: 600; color: #64748b;">Filter:</span>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <div onclick="toggleSideBySideFilter('added')" id="filterLabelAdded" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #cce7ff; border: 2px solid #5eb3ff; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #0096ff;">Added</span>
+                        <div class="filter-box" id="filterBoxAdded" style="width: 20px; height: 20px; background: #d1fae5; border: 2px solid #10b981; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #10b981;">Added</span>
                     </div>
                     <div onclick="toggleSideBySideFilter('removed')" id="filterLabelRemoved" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #ffe5cc; border: 2px solid #ffb366; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #ff8c00;">Removed</span>
+                        <div class="filter-box" id="filterBoxRemoved" style="width: 20px; height: 20px; background: #fee2e2; border: 2px solid #ef4444; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #ef4444;">Removed</span>
                     </div>
                     <div onclick="toggleSideBySideFilter('modified')" id="filterLabelModified" style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #e6d5f5; border: 2px solid #c98fff; border-radius: 3px; position: relative;"></div>
-                        <span style="color: #8a2be2;">Modified</span>
+                        <div class="filter-box" id="filterBoxModified" style="width: 20px; height: 20px; background: #dbeafe; border: 2px solid #3b82f6; border-radius: 3px; position: relative;"></div>
+                        <span style="color: #3b82f6;">Modified</span>
                     </div>
                     <button onclick="resetSideBySideFilter()" style="padding: 4px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 500; margin-left: 10px;">
                         Clear Filters
